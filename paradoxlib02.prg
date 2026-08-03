@@ -141,7 +141,7 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
 RETURN
 
 
-PROCEDURE paradox_to_csv(cDbFile)
+PROCEDURE paradox_to_csv(cDbFile,cSEPARADOR)
   // Local cDbFile  := "siglas.db"
   // Local cCsvFile := "siglas_exportado.csv"
   Local cCsvFile
@@ -152,6 +152,10 @@ PROCEDURE paradox_to_csv(cDbFile)
    Local cFieldNames := "", cRowData := ""
    
    cCsvFile=HB_FNAMEEXTSET(cDbFile)
+
+    IF VALTYPE(cSEPARADOR)<>"C"
+       cSEPARADOR:=";"
+   ENDIF
 
    IF !File( cDbFile )
       ? "Arquivo Paradox nao encontrado: " + cDbFile
@@ -185,7 +189,7 @@ PROCEDURE paradox_to_csv(cDbFile)
 
       // Escreve o nome dos campos no CSV
       FOR j := 0 TO nNumfields - 1
-         cFieldNames += PX_Get_Field_Name( pPxDoc, j ) + If( j < nNumfields - 1, ";", "" )
+         cFieldNames += PX_Get_Field_Name( pPxDoc, j ) + If( j < nNumfields - 1,cSEPARADOR, "" )
       NEXT
       FWrite( nHandleCsv, cFieldNames + hb_eol() )
 
@@ -193,7 +197,7 @@ PROCEDURE paradox_to_csv(cDbFile)
       FOR i := 0 TO nNumRecords - 1
          cRowData := ""
          FOR j := 0 TO nNumfields - 1
-            cRowData += hb_valtostr( PX_Get_Field_Val( pPxDoc, i, j ) ) + If( j < nNumfields - 1, ";", "" )
+            cRowData += hb_valtostr( PX_Get_Field_Val( pPxDoc, i, j ) ) + If( j < nNumfields - 1, cSEPARADOR, "" )
          NEXT
          
          FWrite( nHandleCsv, cRowData + hb_eol() )
