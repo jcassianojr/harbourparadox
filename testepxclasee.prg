@@ -70,5 +70,17 @@ STATIC PROCEDURE ExibirRegistroAtual( oParadox )
    ? "   Dados:", cTexto
    ? "--------------------------------------------------"
 RETURN
+/*
+oParadox:GoTop()
+// Procura o primeiro registro onde o campo NOME contenha "SILVA"
+IF oParadox:Locate( { |o| "SILVA" $ Upper( o:FieldGet( o:FieldPos("DESCR") ) ) } )
+   ? "Encontrado no registro:", oParadox:RecNo()
+ENDIF
+// Procura diretamente pelo código ID "000123" no campo 1
+IF oParadox:Seek( 1, "000123" )
+   ? "Registro encontrado na linha:", oParadox:RecNo()
+ELSE
+   ? "Chave não encontrada."
+ENDIF
 */
 

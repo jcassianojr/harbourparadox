@@ -28,6 +28,10 @@ CLASS ParadoxCursor
    METHOD Append( aRowData )              // Adiciona um novo registro na tabela
    METHOD Delete()                        // Marca o registro atual como deletado
    
+   // --- ADICIONE ESTAS DECLARAÇÕES NA SUA SEÇÃO DE METHOD DA CLASSE ---
+   METHOD Locate( bCondition )
+   METHOD Seek( nFieldPos, xValorProcurado )
+   
    METHOD GetFields()
 ENDCLASS
 
@@ -186,3 +190,39 @@ METHOD GetFields() CLASS ParadoxCursor
       AAdd( aNames, ::FieldName( j ) )
    NEXT
 RETURN aNames
+
+METHOD Locate( bCondition ) CLASS ParadoxCursor
+   Local lFound := .F.
+   Local nOrigem := ::nRecNo
+
+   // Salva a posição atual e varre até o fim
+   WHILE !::Eof()
+      IF Eval( bCondition, Self )
+         lFound := .T.
+         EXIT
+      ENDIF
+      ::Skip( 1 )
+   ENDWHILE
+
+   IF !lFound
+      // Se não achou, retorna o ponteiro para a origem
+      ::GoTo( nOrigem )
+   ENDIF
+
+RETURN lFound
+
+
+METHOD Seek( nCampoPos, xValorProcurado ) CLASS ParadoxCursor
+   Local i, nTotal := ::LastRec()
+   Local nOrigem := ::nRecNo
+
+   FOR i := 1 TO nTotal
+      ::GoTo( i )
+      IF ::FieldGet( nCampoPos ) == xValorProcurado
+         RETURN .T. // Encontrou e posicionou no registro
+      ENDIF
+   NEXT
+
+   // Se não achar, restaura o ponteiro original
+   ::GoTo( nOrigem )
+RETURN .F.
