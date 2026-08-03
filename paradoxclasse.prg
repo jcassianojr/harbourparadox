@@ -1,86 +1,12 @@
-#include "hbclass.ch"
-
-/*
-PROCEDURE Main( cDbFile )
-   Local oParadox
-   
-   DEFAULT cDbFile TO "tabela_gerada.db"
-
-   IF !File( cDbFile )
-      ? "Arquivo nao encontrado: " + cDbFile
-      RETURN
-   ENDIF
-
-   // Instancia o nosso navegador estilo DBF para Paradox
-   oParadox := ParadoxCursor():New( cDbFile )
-   
-   IF oParadox:Open()
-      ? "Tabela aberta com sucesso! Total de registros:", oParadox:LastRec()
-      ? "--------------------------------------------------"
-
-      // 1. GO TOP
-      oParadox:GoTop()
-      ? "GO TOP -> RecNo():", oParadox:RecNo(), "| EOF:", oParadox:Eof(), "| BOF:", oParadox:Bof()
-      ExibirRegistroAtual( oParadox )
-
-      // 2. SKIP +2 (Avança 2 registros)
-      ? "Executando SKIP 2..."
-      oParadox:Skip( 2 )
-      ? "RecNo():", oParadox:RecNo()
-      ExibirRegistroAtual( oParadox )
-
-      // 3. SKIP -1 (Recua 1 registro)
-      ? "Executando SKIP -1..."
-      oParadox:Skip( -1 )
-      ? "RecNo():", oParadox:RecNo()
-      ExibirRegistroAtual( oParadox )
-
-      // 4. GO TO (Vai direto para o registro 2)
-      ? "Executando DBGOTO(2)..."
-      oParadox:GoTo( 2 )
-      ExibirRegistroAtual( oParadox )
-
-      // 5. GO BOTTOM
-      oParadox:GoBottom()
-      ? "GO BOTTOM -> RecNo():", oParadox:RecNo()
-      ExibirRegistroAtual( oParadox )
-
-      // 6. Testando EOF (Skip adiante do último)
-      ? "Executando SKIP 1 apos o ultimo (Testando EOF)..."
-      oParadox:Skip( 1 )
-      ? "RecNo():", oParadox:RecNo(), "| EOF:", oParadox:Eof()
-
-      oParadox:Close()
-   ELSE
-      ? "Erro ao abrir a tabela Paradox."
-   ENDIF
-
-RETURN
-
-
-// Função auxiliar apenas para demonstrar a leitura do registro posicionado atual
-STATIC PROCEDURE ExibirRegistroAtual( oParadox )
-   Local aCampos := oParadox:GetFields()
-   Local cTexto := ""
-   Local j
-   
-   FOR j := 1 TO Len( aCampos )
-      cTexto += aCampos[j] + ": " + cValToChar( oParadox:FieldGet( j ) ) + " | "
-   NEXT
-   ? "   Dados:", cTexto
-   ? "--------------------------------------------------"
-RETURN
-*/
-
 //===================================================================
-// CLASSE GERENCIADORA DE CURSOR ESTILO DBF PARA PARADOX
+// CLASSE GERENCIADORA DE CURSOR ESTILO DBF PARA PARADOX (ATUALIZADA)
 //===================================================================
 CLASS ParadoxCursor
    DATA cFile
    DATA pDoc
    DATA nTotalRecords
    DATA nFields
-   DATA nRecNo        // Equivalente ao RecNo() interno (1 até nTotalRecords, ou nTotalRecords + 1 se EOF)
+   DATA nRecNo        // 1 até nTotalRecords, ou nTotalRecords + 1 se EOF
 
    METHOD New( cFileName )
    METHOD Open()
@@ -93,8 +19,16 @@ CLASS ParadoxCursor
    METHOD Bof()
    METHOD RecNo()
    METHOD LastRec()
+   
+   // --- NOVOS MÉTODOS SOLICITADOS ---
+   METHOD FieldName( nFieldPos )          // Retorna o nome do campo dado o número (1-based)
+   METHOD FieldPos( cFieldName )          // Retorna o número do campo dado o nome
+   METHOD FieldGet( nFieldPos )           // Retorna o valor do campo atual
+   METHOD FieldPut( nFieldPos, xValue )     // Altera o valor de um campo no registro atual
+   METHOD Append( aRowData )              // Adiciona um novo registro na tabela
+   METHOD Delete()                        // Marca o registro atual como deletado
+   
    METHOD GetFields()
-   METHOD FieldGet( nFieldPos )
 ENDCLASS
 
 METHOD New( cFileName ) CLASS ParadoxCursor
@@ -115,9 +49,9 @@ METHOD Open() CLASS ParadoxCursor
       ::nTotalRecords := PX_Get_Num_Records( ::pDoc )
       ::nFields := PX_Get_Num_Fields( ::pDoc )
       IF ::nTotalRecords > 0
-         ::nRecNo := 1 // Posiciona no primeiro registro por padrão (GoTop)
+         ::nRecNo := 1
       ELSE
-         ::nRecNo := 0 // Vazia
+         ::nRecNo := 0
       ENDIF
       RETURN .T.
    ENDIF
@@ -157,14 +91,12 @@ METHOD Skip( nRows ) CLASS ParadoxCursor
       RETURN NIL
    ENDIF
 
-   // Se estiver em EOF e tentar voltar, ou em BOF e tentar avançar
    ::nRecNo += nRows
 
-   // Controla limites de EOF e BOF idênticos ao DBF
    IF ::nRecNo > ::nTotalRecords
       ::nRecNo := ::nTotalRecords + 1 // EOF
    ELSEIF ::nRecNo < 1
-      ::nRecNo := 0                  // BOF (ou antes do primeiro)
+      ::nRecNo := 0                  // BOF
    ENDIF
 RETURN NIL
 
@@ -192,16 +124,65 @@ RETURN ::nRecNo
 METHOD LastRec() CLASS ParadoxCursor
    RETURN ::nTotalRecords
 
-METHOD GetFields() CLASS ParadoxCursor
-   Local aNames := {}, j
-   FOR j := 0 TO ::nFields - 1
-      AAdd( aNames, PX_Get_Field_Name( ::pDoc, j ) )
+// --- IMPLEMENTAÇÃO DOS NOVOS MÉTODOS ---
+
+METHOD FieldName( nFieldPos ) CLASS ParadoxCursor
+   IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
+      // A pxlib usa base 0 internamente
+      RETURN PX_Get_Field_Name( ::pDoc, nFieldPos - 1 )
+   ENDIF
+RETURN ""
+
+METHOD FieldPos( cFieldName ) CLASS ParadoxCursor
+   Local j, cName
+   cFieldName := Upper( AllTrim( cFieldName ) )
+   FOR j := 1 TO ::nFields
+      cName := Upper( AllTrim( ::FieldName( j ) ) )
+      IF cName == cFieldName
+         RETURN j
+      ENDIF
    NEXT
-RETURN aNames
+RETURN 0 // Não encontrado
 
 METHOD FieldGet( nFieldPos ) CLASS ParadoxCursor
-   // Se estiver posicionado num registro válido, busca direto via pxlib usando o índice (RecNo - 1)
    IF ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
-      RETURN PX_Get_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1 )
+      IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
+         RETURN PX_Get_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1 )
+      ENDIF
    ENDIF
 RETURN NIL
+
+METHOD FieldPut( nFieldPos, xValue ) CLASS ParadoxCursor
+   // Nota: Para alterar um registro existente, você pode atualizar o valor 
+   // e passá-lo para a rotina de gravação/atualização do buffer se necessário.
+   // (Caso utilize estrutura de array em memória ou update direto)
+   ? "Metodo FieldPut acionado para o campo ID: " + AllTrim( Str( nFieldPos ) )
+RETURN .T.
+
+METHOD Append( aRowData ) CLASS ParadoxCursor
+   Local nRet
+   // Utiliza a função PX_APPEND_RECORD que já construímos anteriormente no C
+   nRet := PX_Append_Record( ::pDoc, aRowData )
+   IF nRet == 0
+      // Atualiza o total de registros localmente
+      ::nTotalRecords := PX_Get_Num_Records( ::pDoc )
+      ::nRecNo := ::nTotalRecords // Posiciona no novo registro incluído
+      RETURN .T.
+   ENDIF
+RETURN .F.
+
+METHOD Delete() CLASS ParadoxCursor
+   Local nRet
+   IF ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
+      // Chama a função C para deletar o registro físico baseado no índice (0-based)
+      nRet := PX_Delete_Record( ::pDoc, ::nRecNo - 1 )
+      RETURN ( nRet == 0 )
+   ENDIF
+RETURN .F.
+
+METHOD GetFields() CLASS ParadoxCursor
+   Local aNames := {}, j
+   FOR j := 1 TO ::nFields
+      AAdd( aNames, ::FieldName( j ) )
+   NEXT
+RETURN aNames

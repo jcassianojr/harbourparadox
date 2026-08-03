@@ -1,0 +1,12 @@
+EXPORTS
+    PX_new
+    PX_open_file
+    PX_close
+    PX_delete
+    PX_get_record
+    PX_get_num_records
+    PX_get_num_fields
+    PX_get_data_long
+    PX_get_data_short
+    PX_get_data_double
+    PX_get_data_alpha
