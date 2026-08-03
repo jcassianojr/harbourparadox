@@ -1,0 +1,21 @@
+*.c
+*.ch
+*.exe
+*.log
+*.o
+*.reso
+* dll
+convcep/tshead.ch
+convcep/vcshead.ch
+dbu/error.log
+dbu/ErrorLog.Htm
+dbu/letodb/letodbf.log
+dbu/tshead.ch
+dbu/vcshead.ch
+folhahab/lis/tshead.ch
+folhahab/lis/vcshead.ch
+mana5/tshead.ch
+mana5/vcshead.ch
+sefazclass/gerapdf/tshead.ch
+sefazclass/gerapdf/vcshead.ch
+*.dll
