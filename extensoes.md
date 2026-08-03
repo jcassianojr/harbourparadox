@@ -1,12 +1,12 @@
-.DB (TypSammlung.DB): ? o arquivo principal da tabela. Ele armazena os dados est ticos e os registros em si em uma estrutura baseada em blocos.
+.DB (tabela.DB): ? o arquivo principal da tabela. Ele armazena os dados est ticos e os registros em si em uma estrutura baseada em blocos.
 
-.MB (TypSammlung.MB): Significa Memo Blob. Armazena campos do tipo texto longo (memo) ou dados bin rios (BLOBs) que nAo cabem diretamente dentro das linhas do arquivo .DB principal.
+.MB (tabela.MB): Significa Memo Blob. Armazena campos do tipo texto longo (memo) ou dados bin rios (BLOBs) que nAo cabem diretamente dentro das linhas do arquivo .DB principal.
 
-.PX (TypSammlung.PX): ? o arquivo de !ndice prim rio (Primary Index). Guarda a  rvore de busca (B-tree) para chaves prim rias e ordena?aes r pidas da tabela.
+.PX (tabela.PX): ? o arquivo de !ndice prim rio (Primary Index). Guarda a  rvore de busca (B-tree) para chaves prim rias e ordena?aes r pidas da tabela.
 
-.VAL (TypSammlung.VAL): Armazena regras de valida?Ao de dados e restri?aes de integridade definidas para os campos da tabela.
+.VAL (tabela.VAL): Armazena regras de valida?Ao de dados e restri?aes de integridade definidas para os campos da tabela.
 
-.sch (TYPSAMMLUNG.sch): Cont,m o esquema estrutural ou informa?aes auxiliares de defini?Ao/esquema da tabela.
+.sch (tabela.sch): Cont,m o esquema estrutural ou informa?aes auxiliares de defini?Ao/esquema da tabela.
 
 .X02 / .X0C e .Y02 / .Y0C: SAo arquivos de !ndices secund rios (.Xnn / .Ynn). O Paradox cria essas extensaes numeradas para gerenciar !ndices secund rios adicionais criados sobre os campos da tabela para agilizar buscas e relacionamentos.
 

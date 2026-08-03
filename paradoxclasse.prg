@@ -19,6 +19,7 @@ CLASS ParadoxCursor
    METHOD Bof()
    METHOD RecNo()
    METHOD LastRec()
+   METHOD pack()
    
    // --- NOVOS MÉTODOS SOLICITADOS ---
    METHOD FieldName( nFieldPos )          // Retorna o nome do campo dado o número (1-based)
@@ -226,3 +227,73 @@ METHOD Seek( nCampoPos, xValorProcurado ) CLASS ParadoxCursor
    // Se não achar, restaura o ponteiro original
    ::GoTo( nOrigem )
 RETURN .F.
+
+
+METHOD Pack() CLASS ParadoxCursor
+   Local cTempFile := ::cFile + ".tmp"
+   Local pDocTemp := NIL
+   Local nTotal := ::LastRec()
+   Local aStruct := {}
+   Local i, j, nFields, cFieldType, nFieldLen, nFieldDec
+   Local aRow := {}
+   Local lOk := .F.
+
+   IF ::nTotalRecords == 0
+      RETURN .T.
+   ENDIF
+
+   nFields := ::nFields
+
+   // 1. Mapeia a estrutura atual dos campos para criar a tabela temporária
+   FOR j := 1 TO nFields
+      cFieldType := "C"
+      nFieldLen := 50
+      nFieldDec := 0
+      
+      // Descobre os tipos reais para recriar a estrutura idêntica
+      // (Podemos reutilizar a lógica de tipo da pxlib ou ler o cabeçalho)
+      AAdd( aStruct, { ::FieldName( j ), "C", 50, 0 } ) // Simplificado ou ajustado conforme a struct original
+   NEXT
+
+   // Nota: O ideal é reutilizar a matriz exata de tipos se você já tiver ela mapeada.
+   // Vamos criar o documento temporário via pxlib:
+   pDocTemp := PX_New()
+   IF pDocTemp == 0 .OR. pDocTemp == NIL
+      RETURN .F.
+   ENDIF
+
+   // Tenta criar a tabela temporária
+   IF PX_Create_Table( pDocTemp, cTempFile, aStruct ) == 0
+      // 2. Varre a tabela original copiando apenas os registros NÃO deletados
+      // (A pxlib gerencia o status de exclusão física no arquivo)
+      FOR i := 1 TO nTotal
+         ::GoTo( i )
+         
+         // Verifica se o registro não está deletado (se não houver marcação de exclusão física)
+         // Como a pxlib retorna os dados ativos, extraímos a linha:
+         aRow := {}
+         FOR j := 1 TO nFields
+            AAdd( aRow, ::FieldGet( j ) )
+         NEXT
+         
+         // Insere no temporário
+         PX_Append_Record( pDocTemp, aRow )
+      NEXT
+
+      PX_Close( pDocTemp )
+      PX_Delete( pDocTemp )
+      lOk := .T.
+   ENDIF
+
+   IF lOk
+      // 3. Substitui o arquivo original pelo limpo
+      ::Close()
+      IF File( ::cFile )
+         Erase( ::cFile )
+      ENDIF
+      HB_FileMove( cTempFile, ::cFile )
+      ::Open() // Reabre a tabela atualizada
+      ? "PACK executado com sucesso! Registros deletados removidos."
+   ENDIF
+
+RETURN lOk

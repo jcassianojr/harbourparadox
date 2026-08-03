@@ -210,3 +210,104 @@ PROCEDURE paradox_to_csv(cDbFile)
 
 RETURN
 
+FUNCTION Paradox_Pack( cDbFile )
+   Local cTempFile := cDbFile + ".tmp"
+   Local pDocOrig := NIL, pDocTemp := NIL
+   Local nTotalRecords := 0, nNumFields := 0
+   Local aStruct := {}
+   Local i, j, nFieldLen, nFieldDec, nFieldType
+   Local aRow := {}
+   Local lSuccess := .F.
+
+   IF !File( cDbFile )
+      ? "Erro: Arquivo Paradox nao encontrado: " + cDbFile
+      RETURN .F.
+   ENDIF
+
+   // 1. Abre a tabela original para leitura
+   pDocOrig := PX_New()
+   IF pDocOrig == 0 .OR. pDocOrig == NIL
+      RETURN .F.
+   ENDIF
+
+   IF PX_Open_File( pDocOrig, cDbFile ) != 0
+      PX_Delete( pDocOrig )
+      RETURN .F.
+   ENDIF
+
+   nTotalRecords := PX_Get_Num_Records( pDocOrig )
+   nNumFields    := PX_Get_Num_Fields( pDocOrig )
+
+   IF nTotalRecords <= 0
+      PX_Close( pDocOrig )
+      PX_Delete( pDocOrig )
+      RETURN .T. // Tabela vazia já está limpa
+   ENDIF
+
+   // 2. Mapeia a estrutura de campos para criar a tabela temporária
+   FOR j := 0 TO nNumFields - 1
+      cFieldName := PX_Get_Field_Name( pDocOrig, j )
+      nFieldType := PX_Get_Field_Type_And_Len( pDocOrig, j, @nFieldLen, @nFieldDec )
+      
+      // Mapeia de acordo com os tipos suportados pela sua rotina de criação
+      IF nFieldType == 1
+         AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
+      ELSEIF nFieldType == 2 .OR. nFieldType == 21
+         AAdd( aStruct, { cFieldName, "D", 8, 0 } )
+      ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .OR. nFieldType == 22
+         AAdd( aStruct, { cFieldName, "N", Max(1, nFieldLen), 0 } )
+      ELSEIF nFieldType == 5 .OR. nFieldType == 6
+         AAdd( aStruct, { cFieldName, "N", 18, 4 } )
+      ELSE
+         AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
+      ENDIF
+   NEXT
+
+   // 3. Cria o arquivo temporário Paradox
+   pDocTemp := PX_New()
+   IF pDocTemp == 0 .OR. pDocTemp == NIL
+      PX_Close( pDocOrig )
+      PX_Delete( pDocOrig )
+      RETURN .F.
+   ENDIF
+
+   IF PX_Create_Table( pDocTemp, cTempFile, aStruct ) == 0
+      
+      // 4. Copia os registros (a pxlib omite os deletados automaticamente ao iterar)
+      FOR i := 0 TO nTotalRecords - 1
+         aRow := {}
+         FOR j := 0 TO nNumFields - 1
+            AAdd( aRow, PX_Get_Field_Val( pDocOrig, i, j ) )
+         NEXT
+         
+         // Grava no arquivo temporário limpo
+         PX_Append_Record( pDocTemp, aRow )
+      NEXT
+
+      PX_Close( pDocTemp )
+      lSuccess := .T.
+   ENDIF
+
+   PX_Close( pDocOrig )
+   PX_Delete( pDocOrig )
+   IF pDocTemp != NIL
+      PX_Delete( pDocTemp )
+   ENDIF
+
+   // 5. Se tudo deu certo, substitui o arquivo original pelo temporário compactado
+   IF lSuccess
+      IF File( cDbFile )
+         Erase( cDbFile )
+      ENDIF
+      
+      // Remove também índices antigos dessincronizados se existirem (.PX)
+      IF File( cDbFile + ".PX" )
+         Erase( cDbFile + ".PX" )
+      ENDIF
+
+      HB_FileMove( cTempFile, cDbFile )
+      ? "PACK avulso executado com sucesso para: " + cDbFile
+      RETURN .T.
+   ENDIF
+
+RETURN .F.

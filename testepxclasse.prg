@@ -70,6 +70,9 @@ STATIC PROCEDURE ExibirRegistroAtual( oParadox )
    ? "   Dados:", cTexto
    ? "--------------------------------------------------"
 RETURN
+
+
+
 /*
 oParadox:GoTop()
 // Procura o primeiro registro onde o campo NOME contenha "SILVA"
@@ -82,5 +85,46 @@ IF oParadox:Seek( 1, "000123" )
 ELSE
    ? "Chave não encontrada."
 ENDIF
+
+PROCEDURE Main( cDbFile )
+   Local oParadox
+   
+   DEFAULT cDbFile TO "TypSammlung.DB"
+
+   IF !File( cDbFile )
+      ? "Arquivo nao encontrado: " + cDbFile
+      RETURN
+   ENDIF
+
+   oParadox := ParadoxCursor():New( cDbFile )
+   
+   IF oParadox:Open()
+      ? "--------------------------------------------------"
+      ? "Estado Inicial - Total de Registros:", oParadox:LastRec()
+      
+      // Posiciona no primeiro registro e simula a exclusão
+      oParadox:GoTop()
+      ? "Deletando o registro atual (RecNo 1)..."
+      
+      IF oParadox:Delete()
+         ? "Registro marcado como deletado com sucesso."
+      ELSE
+         ? "Falha ao deletar registro."
+      ENDIF
+
+      // Executa o Pack para expurgar definitivamente
+      ? "Executando o PACK na tabela Paradox..."
+      oParadox:Pack()
+
+      ? "Total de registros apos o PACK:", oParadox:LastRec()
+      ? "--------------------------------------------------"
+
+      oParadox:Close()
+   ELSE
+      ? "Erro ao abrir a tabela Paradox para o teste de Pack."
+   ENDIF
+
+RETURN
+
 */
 
