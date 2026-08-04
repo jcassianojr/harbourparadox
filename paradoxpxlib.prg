@@ -19,6 +19,21 @@ HB_FUNC( PX_OPEN_FILE )
    hb_retni( PX_open_file( pxdoc, (char * ) filename ) );
 }
 
+HB_FUNC( PX_OPEN_FILE2 )
+{
+   pxdoc_t *pxdoc = (pxdoc_t *) (HB_PTRDIFF) hb_parnl( 1 );
+   const char *filename = hb_parc( 2 );
+
+   // Proteção vital: se o ponteiro ou o nome do arquivo forem inválidos, 
+   // retorna -1 em vez de estourar um Access Violation na memória do Windows.
+   if( !pxdoc || !filename ) {
+      hb_retni( -1 );
+      return;
+   }
+
+   hb_retni( PX_open_file( pxdoc, (char * ) filename ) );
+}
+
 HB_FUNC( PX_CLOSE )
 {
    pxdoc_t *pxdoc = (pxdoc_t *) (HB_PTRDIFF) hb_parnl( 1 );
