@@ -34,8 +34,73 @@ PROCEDURE ParadoxCreateTable( cDbFile, aStruct )
 RETURN .t.
 
 
+//===================================================================
+// FUNÇÃO INDEPENDENTE: Retorna a estrutura (dbStruct) de uma tabela Paradox
+//===================================================================
+FUNCTION Paradox_DbStruct( cDbFile )
+   Local pPxDoc := NIL
+   Local nNumFields := 0
+   Local j, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
+   Local cFieldName := "", cHarbourType := "C"
+   Local aStruct := {}
 
-FUNCTION Dbf_Para_Paradox( cDbfFile, ,cDRIVEDES,lincdados )
+   IF !File( cDbFile )
+      RETURN aStruct
+   ENDIF
+
+   pPxDoc := PX_New()
+   IF pPxDoc == 0 .OR. pPxDoc == NIL
+      RETURN aStruct
+   ENDIF
+
+   IF PX_Open_File( pPxDoc, cDbFile ) == 0
+      nNumFields := PX_Get_Num_Fields( pPxDoc )
+
+      FOR j := 0 TO nNumFields - 1
+         cFieldName := PX_Get_Field_Name( pPxDoc, j )
+         
+         // Obtém o tipo interno do Paradox e os tamanhos por referência
+         nFieldType := PX_Get_Field_Type_And_Len( pPxDoc, j, @nFieldLen, @nFieldDec )
+         
+         // Mapeia o tipo do Paradox para o equivalente padrão do DBF/Harbour
+         // 1 = Alpha (C)
+         // 2 = Date / 21 = Timestamp (D)
+         // 3 = Short / 4 = Long / 22 = AutoInc (N)
+         // 5 = Number / 6 = Currency (N com decimais)
+         // 9 = Logical (L)
+         IF nFieldType == 1
+            cHarbourType := "C"
+            nFieldDec := 0
+         ELSEIF nFieldType == 2 .OR. nFieldType == 21
+            cHarbourType := "D"
+            nFieldLen := 8
+            nFieldDec := 0
+         ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .OR. nFieldType == 22
+            cHarbourType := "N"
+            nFieldDec := 0
+         ELSEIF nFieldType == 5 .OR. nFieldType == 6
+            cHarbourType := "N"
+            nFieldLen := Max( nFieldLen, 18 )
+         ELSEIF nFieldType == 9
+            cHarbourType := "L"
+            nFieldLen := 1
+            nFieldDec := 0
+         ELSE
+            cHarbourType := "C"
+         ENDIF
+
+         // Adiciona ao formato padrão: { Nome, Tipo, Tamanho, Decimais }
+         AAdd( aStruct, { cFieldName, cHarbourType, Max(1, nFieldLen), nFieldDec } )
+      NEXT
+
+      PX_Close( pPxDoc )
+   ENDIF
+
+   PX_Delete( pPxDoc )
+
+RETURN aStruct
+
+FUNCTION Dbf_Para_Paradox( cDbfFile ,cDRIVEDES,lincdados )
    Local pPxDoc := NIL
    Local nNumFields := 0
    Local j, nTotalDbf := 0
@@ -70,13 +135,13 @@ FUNCTION Dbf_Para_Paradox( cDbfFile, ,cDRIVEDES,lincdados )
       Return .F.
    ENDIF
 
-   nNumFields := FieldCount()
+   nNumFields := FCount()
    nTotalDbf  := LastRec()
    aStruct:=dbstruct() 
    
    
    IF .not. ParadoxCreateTable( cDbFile, aStruct )
-      mdt("erro criando")
+      ? "erro criando"
       return .f.
    endif
    
@@ -131,7 +196,7 @@ FUNCTION Dbf_Para_Paradox( cDbfFile, ,cDRIVEDES,lincdados )
          ENDIF
 
          DBSKIP()
-      ENDWHILE
+      ENDDO
 
       PX_Close( pPxDoc )
       lSuccess := .T.
@@ -429,9 +494,11 @@ FUNCTION Paradox_Pack( cDbFile )
          Erase( cDbFile + ".PX" )
       ENDIF
 
-      HB_FileMove( cTempFile, cDbFile )
+      Filecopy( cTempFile, cDbFile )
       ? "PACK avulso executado com sucesso para: " + cDbFile
       RETURN .T.
    ENDIF
+   
+    
 
 RETURN .F.

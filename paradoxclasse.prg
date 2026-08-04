@@ -1,3 +1,4 @@
+#include "hbclass.ch"
 //===================================================================
 // CLASSE GERENCIADORA DE CURSOR ESTILO DBF PARA PARADOX (ATUALIZADA)
 //===================================================================
@@ -28,6 +29,7 @@ CLASS ParadoxCursor
    METHOD FieldPut( nFieldPos, xValue )     // Altera o valor de um campo no registro atual
    METHOD Append( aRowData )              // Adiciona um novo registro na tabela
    METHOD Delete()                        // Marca o registro atual como deletado
+   METHOD DbStruct()
    
    // --- ADICIONE ESTAS DECLARAÇÕES NA SUA SEÇÃO DE METHOD DA CLASSE ---
    METHOD Locate( bCondition )
@@ -43,6 +45,46 @@ METHOD New( cFileName ) CLASS ParadoxCursor
    ::nFields := 0
    ::nRecNo := 0
 RETURN Self
+
+METHOD DbStruct() CLASS ParadoxCursor
+   Local j, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
+   Local cFieldName := "", cHarbourType := "C"
+   Local aStruct := {}
+
+   IF ::pDoc == NIL .OR. ::nFields <= 0
+      RETURN aStruct
+   ENDIF
+
+   FOR j := 0 TO ::nFields - 1
+      cFieldName := PX_Get_Field_Name( ::pDoc, j )
+      nFieldType := PX_Get_Field_Type_And_Len( ::pDoc, j, @nFieldLen, @nFieldDec )
+      
+      IF nFieldType == 1
+         cHarbourType := "C"
+         nFieldDec := 0
+      ELSEIF nFieldType == 2 .OR. nFieldType == 21
+         cHarbourType := "D"
+         nFieldLen := 8
+         nFieldDec := 0
+      ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .OR. nFieldType == 22
+         cHarbourType := "N"
+         nFieldDec := 0
+      ELSEIF nFieldType == 5 .OR. nFieldType == 6
+         cHarbourType := "N"
+         nFieldLen := Max( nFieldLen, 18 )
+      ELSEIF nFieldType == 9
+         cHarbourType := "L"
+         nFieldLen := 1
+         nFieldDec := 0
+      ELSE
+         cHarbourType := "C"
+      ENDIF
+
+      AAdd( aStruct, { cFieldName, cHarbourType, Max(1, nFieldLen), nFieldDec } )
+   NEXT
+
+RETURN aStruct
+
 
 METHOD Open() CLASS ParadoxCursor
    ::pDoc := PX_New()
@@ -90,7 +132,9 @@ METHOD GoBottom() CLASS ParadoxCursor
 RETURN NIL
 
 METHOD Skip( nRows ) CLASS ParadoxCursor
-   DEFAULT nRows TO 1
+   IF VALTYPE(nRows)<>"N"
+      nRows:=1
+   ENDIF
 
    IF ::nTotalRecords == 0
       RETURN NIL
@@ -203,7 +247,7 @@ METHOD Locate( bCondition ) CLASS ParadoxCursor
          EXIT
       ENDIF
       ::Skip( 1 )
-   ENDWHILE
+   ENDDO
 
    IF !lFound
       // Se não achou, retorna o ponteiro para a origem
@@ -291,7 +335,7 @@ METHOD Pack() CLASS ParadoxCursor
       IF File( ::cFile )
          Erase( ::cFile )
       ENDIF
-      HB_FileMove( cTempFile, ::cFile )
+      FileCOPY( cTempFile, ::cFile )
       ::Open() // Reabre a tabela atualizada
       ? "PACK executado com sucesso! Registros deletados removidos."
    ENDIF
