@@ -6,7 +6,7 @@
 #include "fileio.ch"
 
 
-PROCEDURE paradox_from_estrutura( cDbFile, aStruct )
+PROCEDURE ParadoxCreateTable( cDbFile, aStruct )
    Local pPxDoc := NIL
 
    ? "Iniciando criacao e gravacao do arquivo Paradox em: " + cDbFile + " ..."
@@ -14,14 +14,15 @@ PROCEDURE paradox_from_estrutura( cDbFile, aStruct )
    pPxDoc := PX_New()
    IF pPxDoc == 0 .OR. pPxDoc == NIL
       ? "Erro ao instanciar PX_New()"
-      RETURN
+      RETURN  .f.
    ENDIF
 
-   // ETAPA 1: CriaÃ§Ã£o da Estrutura e do Arquivo Vazio no caminho especificado
+   // ETAPA 1: Criação da Estrutura e do Arquivo Vazio no caminho especificado
    IF PX_Create_Table( pPxDoc, cDbFile, aStruct ) == 0
       ? "Estrutura do Paradox criada com sucesso!"
    ELSE
       ? "Erro ao criar o arquivo Paradox no caminho informado."
+      RETURN  .f.
    ENDIF
 
    // Limpeza segura dos ponteiros da pxlib
@@ -30,11 +31,124 @@ PROCEDURE paradox_from_estrutura( cDbFile, aStruct )
    
    ? "Processo finalizado!"
 
-RETURN
+RETURN .t.
 
 
 
-PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
+FUNCTION Dbf_Para_Paradox( cDbfFile, ,cDRIVEDES,lincdados )
+   Local pPxDoc := NIL
+   Local nNumFields := 0
+   Local j, nTotalDbf := 0
+   Local aRow := {}
+   Local xVal
+   Local cFieldTypeDbf
+   Local lSuccess := .F.
+   
+   IF VALTYPE(cDRIVEDES)<>"C"
+    cDRIVEDES:="DBFCDX"
+   ENDIF
+   
+   IF VALTYPE(lincdados)<>"L"
+    lincdados:=.T.
+   ENDIF
+
+   cDbTargetFile:=HB_FNAMEEXTSET(cDbFile,"db")
+   
+
+   IF !File( cDbfFile )
+      ? "Erro: Arquivo DBF de origem nao encontrado: " + cDbfFile
+      Return .F.
+   ENDIF
+
+   // 1. Abre o DBF de origem em modo compartilhado/leitura
+   //USE ( cDbfFile ) NEW VIA "DBFCDX" SHARED ALIAS "ORIGEM"
+   
+   dbUseArea( .T., (cDRIVEDES), (cDbfFile), "ORIGEM", .T. , .F. )
+
+   IF NetErr()
+      ? "Erro ao abrir o arquivo DBF de origem."
+      Return .F.
+   ENDIF
+
+   nNumFields := FieldCount()
+   nTotalDbf  := LastRec()
+   aStruct:=dbstruct() 
+   
+   
+   IF .not. ParadoxCreateTable( cDbFile, aStruct )
+      mdt("erro criando")
+      return .f.
+   endif
+   
+   if .not. lincdados
+      dbclosearea()
+      return .t.
+   endif
+
+   ? "Iniciando transferencia de " + AllTrim( Str( nTotalDbf ) ) + " registros do DBF para o Paradox..."
+
+   // 2. Instancia o documento Paradox para escrita/append
+   pPxDoc := PX_New()
+   IF pPxDoc == 0 .OR. pPxDoc == NIL
+      dbSELECTar("ORIGEM")
+      dbclosearea()
+      Return .F.
+   ENDIF
+
+   // Tenta abrir o arquivo Paradox já existente para receber os dados
+   IF PX_Open_File( pPxDoc, cDbTargetFile ) == 0
+      
+      // 3. Varre todos os registros do DBF
+      DBGOTOP()
+      WHILE !EOF()
+         aRow := Array( nNumFields )
+         
+         FOR j := 1 TO nNumFields
+            xVal := FieldGet( j )
+            cFieldTypeDbf := ValType( xVal )
+            
+            // Tratamentos específicos de conversão de tipos para o Paradox se necessário
+            IF cFieldTypeDbf == "D"
+               // Converte data do Harbour (YYYYMMDD) para string ISO ("YYYY-MM-DD") esperada pelo C-Pragma de Append
+               IF !Empty( xVal )
+                  aRow[j] := DToS( xVal )
+                  aRow[j] := SubStr( aRow[j], 1, 4 ) + "-" + SubStr( aRow[j], 5, 2 ) + "-" + SubStr( aRow[j], 7, 2 )
+               ELSE
+                  aRow[j] := ""
+               EndIf
+            ELSEIF cFieldTypeDbf == "L"
+               // Lógico (.T./.F.)
+               aRow[j] := xVal
+            ELSE
+               // Caracteres e Numéricos passam direto
+               aRow[j] := xVal
+            EndIf
+         NEXT
+
+         // Insere o array de dados no Paradox utilizando a função nativa C-Pragma que construímos
+         IF PX_Append_Record( pPxDoc, aRow ) != 0
+            ? "Aviso: Falha ao inserir o registro RecNo " + AllTrim( Str( RECNO() ) )
+         ENDIF
+
+         DBSKIP()
+      ENDWHILE
+
+      PX_Close( pPxDoc )
+      lSuccess := .T.
+      ? "Transferencia para o Paradox concluida com sucesso!"
+   ELSE
+      ? "Erro ao abrir o arquivo Paradox de destino: " + cDbTargetFile
+   ENDIF
+
+   PX_Delete( pPxDoc )
+ 
+   dbSELECTar("ORIGEM")
+   dbclosearea()
+
+Return lSuccess
+
+
+PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
  //  Local cDbFile  := "siglas.db"
  //  Local cDbfFile := "siglas_convertido.dbf"
    Local pPxDoc   := NIL
@@ -49,8 +163,12 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
    IF VALTYPE(cDRIVEDES)<>"C"
     cDRIVEDES:="DBFCDX"
    ENDIF
+   
+   IF VALTYPE(lincdados)<>"L"
+    lincdados:=.T.
+   ENDIF
 
-   cDbfFile:=HB_FNAMEEXTSET(cDbFile)
+   cDbfFile:=HB_FNAMEEXTSET(cDbFile,"dbf")
    //RddSetDefault( "DBFCDX" )
 
    IF !File( cDbFile )
@@ -77,7 +195,7 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
       FOR j := 0 TO nNumfields - 1
          cFieldName := PX_Get_Field_Name( pPxDoc, j )
          
-         // Descobre o tipo do campo no Paradox atravÃ©s do ponteiro interno da struct
+         // Descobre o tipo do campo no Paradox através do ponteiro interno da struct
          // (Fazemos uma chamada auxiliar em C embutido para pegar o ftype e tamanho exato)
          nFieldType := PX_Get_Field_Type_And_Len( pPxDoc, j, @nFieldLen, @nFieldDec )
          
@@ -95,7 +213,7 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
          ELSEIF nFieldType == 5 .OR. nFieldType == 6
             AAdd( aStruct, { cFieldName, "N", 18, 4 } )
          ELSE
-            // Fallback genÃ©rico para caracteres caso encontre outro tipo
+            // Fallback genérico para caracteres caso encontre outro tipo
             AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
          ENDIF
       NEXT
@@ -109,6 +227,8 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
       ? "Arquivo DBF criado com sucesso: " + cDbfFile
 
 // 3. Varre todos os registros do Paradox e grava no DBF
+
+         IF lincdados
             FOR i := 0 TO nNumRecords - 1
                ( "TRG" )->( DbAppend() )
                
@@ -127,7 +247,7 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES)
                   ENDIF
                NEXT
             NEXT
-
+         ENDIF
 
       ( "TRG" )->( DbCloseArea() )
       PX_Close( pPxDoc )
@@ -245,15 +365,15 @@ FUNCTION Paradox_Pack( cDbFile )
    IF nTotalRecords <= 0
       PX_Close( pDocOrig )
       PX_Delete( pDocOrig )
-      RETURN .T. // Tabela vazia jÃ¡ estÃ¡ limpa
+      RETURN .T. // Tabela vazia já está limpa
    ENDIF
 
-   // 2. Mapeia a estrutura de campos para criar a tabela temporÃ¡ria
+   // 2. Mapeia a estrutura de campos para criar a tabela temporária
    FOR j := 0 TO nNumFields - 1
       cFieldName := PX_Get_Field_Name( pDocOrig, j )
       nFieldType := PX_Get_Field_Type_And_Len( pDocOrig, j, @nFieldLen, @nFieldDec )
       
-      // Mapeia de acordo com os tipos suportados pela sua rotina de criaÃ§Ã£o
+      // Mapeia de acordo com os tipos suportados pela sua rotina de criação
       IF nFieldType == 1
          AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
       ELSEIF nFieldType == 2 .OR. nFieldType == 21
@@ -267,7 +387,7 @@ FUNCTION Paradox_Pack( cDbFile )
       ENDIF
    NEXT
 
-   // 3. Cria o arquivo temporÃ¡rio Paradox
+   // 3. Cria o arquivo temporário Paradox
    pDocTemp := PX_New()
    IF pDocTemp == 0 .OR. pDocTemp == NIL
       PX_Close( pDocOrig )
@@ -284,7 +404,7 @@ FUNCTION Paradox_Pack( cDbFile )
             AAdd( aRow, PX_Get_Field_Val( pDocOrig, i, j ) )
          NEXT
          
-         // Grava no arquivo temporÃ¡rio limpo
+         // Grava no arquivo temporário limpo
          PX_Append_Record( pDocTemp, aRow )
       NEXT
 
@@ -298,13 +418,13 @@ FUNCTION Paradox_Pack( cDbFile )
       PX_Delete( pDocTemp )
    ENDIF
 
-   // 5. Se tudo deu certo, substitui o arquivo original pelo temporÃ¡rio compactado
+   // 5. Se tudo deu certo, substitui o arquivo original pelo temporário compactado
    IF lSuccess
       IF File( cDbFile )
          Erase( cDbFile )
       ENDIF
       
-      // Remove tambÃ©m Ã­ndices antigos dessincronizados se existirem (.PX)
+      // Remove também índices antigos dessincronizados se existirem (.PX)
       IF File( cDbFile + ".PX" )
          Erase( cDbFile + ".PX" )
       ENDIF
