@@ -3,6 +3,10 @@
 REQUEST DBFCDX
 
 
+function main
+  
+  
+  
 PROCEDURE testecriacaoeappend()
    Local cDbFile := "tabela_gerada.db"
    Local aStruct := { ;
