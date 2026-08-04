@@ -1,0 +1,51 @@
+/* --------------------------------------------------------------------
+ * NOTE: You can add manual override which functions to include or
+ *       exclude from automatically generated EXTERNAL/DYNAMIC list.
+ *          Syntax: // HB_FUNC_INCLUDE <func>
+ *                  // HB_FUNC_EXCLUDE <func>
+ */
+
+/* --------------------------------------------------------------------
+ * WARNING: Automatically generated code below. DO NOT EDIT! (except casing)
+ *          Regenerate using hbmk2 '-hbx=' option.
+ */
+
+#ifndef __HBEXTERN_CH__HARBOURPARADOX__
+#define __HBEXTERN_CH__HARBOURPARADOX__
+
+#if defined( __HBEXTREQ__ ) .OR. defined( __HBEXTERN__HARBOURPARADOX__ANNOUNCE )
+   ANNOUNCE __HBEXTERN__HARBOURPARADOX__
+#endif
+
+#if defined( __HBEXTREQ__ ) .OR. defined( __HBEXTERN__HARBOURPARADOX__REQUEST )
+   #command DYNAMIC <fncs,...> => EXTERNAL <fncs>
+#endif
+
+DYNAMIC DBF_PARA_PARADOX
+DYNAMIC GETPARADOXHEADERINFO
+DYNAMIC PARADOXCREATETABLE
+DYNAMIC PARADOXCURSOR
+DYNAMIC PARADOX_DBSTRUCT
+DYNAMIC PARADOX_PACK
+DYNAMIC PARADOX_TO_CSV
+DYNAMIC PARADOX_TO_DBF
+DYNAMIC PXSTRUCT
+DYNAMIC PX_APPEND_RECORD
+DYNAMIC PX_CLOSE
+DYNAMIC PX_CREATE_TABLE
+DYNAMIC PX_DELETE
+DYNAMIC PX_DELETE_RECORD
+DYNAMIC PX_GET_FIELD_NAME
+DYNAMIC PX_GET_FIELD_TYPE_AND_LEN
+DYNAMIC PX_GET_FIELD_VAL
+DYNAMIC PX_GET_NUM_FIELDS
+DYNAMIC PX_GET_NUM_RECORDS
+DYNAMIC PX_NEW
+DYNAMIC PX_OPEN_FILE
+DYNAMIC PX_RECNO
+
+#if defined( __HBEXTREQ__ ) .OR. defined( __HBEXTERN__HARBOURPARADOX__REQUEST )
+   #uncommand DYNAMIC <fncs,...> => EXTERNAL <fncs>
+#endif
+
+#endif

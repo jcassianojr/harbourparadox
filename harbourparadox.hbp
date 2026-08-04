@@ -1,0 +1,30 @@
+
+-o${hb_name}
+
+
+-hbx=${hb_name}.hbx
+
+
+# Nome da biblioteca de saída
+#-o./lib/harbourparadox
+-olib/${hb_plat}/${hb_comp}/${hb_name}
+
+{!xhb}-hbx=harbourparadox.hbx
+{!xhb}harbourparadox.hbx
+
+-Ic:\harbour\hb3rd\pxlib\include\
+
+# Modo biblioteca
+-hblib
+-inc
+
+# Configurações de compilação (equivalentes aos parâmetros do .bat)
+-n -w2 -gc0
+
+paradoxpxlib.prg 
+paradoxclasse.prg 
+paradoxlib01.prg 
+paradoxlib02.prg 
+
+
+$hb_pkg_install.hbm

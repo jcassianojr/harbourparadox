@@ -6,7 +6,7 @@
 #include "fileio.ch"
 
 
-PROCEDURE ParadoxCreateTable( cDbFile, aStruct )
+function  ParadoxCreateTable( cDbFile, aStruct )
    Local pPxDoc := NIL
 
    ? "Iniciando criacao e gravacao do arquivo Paradox em: " + cDbFile + " ..."
@@ -108,6 +108,8 @@ FUNCTION Dbf_Para_Paradox( cDbfFile ,cDRIVEDES,lincdados )
    Local xVal
    Local cFieldTypeDbf
    Local lSuccess := .F.
+   LOCAL cDbTargetFile
+   LOCAL aStruct
    
    IF VALTYPE(cDRIVEDES)<>"C"
     cDRIVEDES:="DBFCDX"
@@ -117,7 +119,7 @@ FUNCTION Dbf_Para_Paradox( cDbfFile ,cDRIVEDES,lincdados )
     lincdados:=.T.
    ENDIF
 
-   cDbTargetFile:=HB_FNAMEEXTSET(cDbFile,"db")
+   cDbTargetFile:=HB_FNAMEEXTSET(cDbfFile,"db")
    
 
    IF !File( cDbfFile )
@@ -140,7 +142,7 @@ FUNCTION Dbf_Para_Paradox( cDbfFile ,cDRIVEDES,lincdados )
    aStruct:=dbstruct() 
    
    
-   IF .not. ParadoxCreateTable( cDbFile, aStruct )
+   IF .not. ParadoxCreateTable( cDbTargetFile, aStruct )
       ? "erro criando"
       return .f.
    endif
@@ -213,12 +215,12 @@ FUNCTION Dbf_Para_Paradox( cDbfFile ,cDRIVEDES,lincdados )
 Return lSuccess
 
 
-PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
+function  paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
  //  Local cDbFile  := "siglas.db"
  //  Local cDbfFile := "siglas_convertido.dbf"
    Local pPxDoc   := NIL
    Local nNumRecords := 0, nNumFields := 0
-   Local i, j, k
+   Local i, j
    Local aStruct := {}
    Local cFieldName, nFieldType, nFieldLen, nFieldDec
    Local xVal
@@ -238,7 +240,7 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
 
    IF !File( cDbFile )
       ? "Arquivo Paradox nao encontrado: " + cDbFile
-      RETURN
+      RETURN .f.
    ENDIF
 
    ? "Iniciando a leitura do Paradox para conversao em DBF..."
@@ -246,7 +248,7 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
    pPxDoc := PX_New()
    IF pPxDoc == 0 .OR. pPxDoc == NIL
       ? "Erro ao instanciar PX_New()"
-      RETURN
+      RETURN .f.
    ENDIF
 
    IF PX_Open_File( pPxDoc, cDbFile ) == 0
@@ -323,10 +325,10 @@ PROCEDURE paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
 
    PX_Delete( pPxDoc )
 
-RETURN
+RETURN .T.
 
 
-PROCEDURE paradox_to_csv(cDbFile,cSEPARADOR)
+function  paradox_to_csv(cDbFile,cSEPARADOR)
   // Local cDbFile  := "siglas.db"
   // Local cCsvFile := "siglas_exportado.csv"
   Local cCsvFile
@@ -344,7 +346,7 @@ PROCEDURE paradox_to_csv(cDbFile,cSEPARADOR)
 
    IF !File( cDbFile )
       ? "Arquivo Paradox nao encontrado: " + cDbFile
-      RETURN
+      RETURN .F.
    ENDIF
 
    ? "Iniciando a leitura do Paradox via pxlib estatica..."
@@ -353,7 +355,7 @@ PROCEDURE paradox_to_csv(cDbFile,cSEPARADOR)
    
    IF pPxDoc == 0 .OR. pPxDoc == NIL
       ? "Erro ao instanciar PX_New()"
-      RETURN
+      RETURN .F.
    ENDIF
 
    IF PX_Open_File( pPxDoc, cDbFile ) == 0
@@ -363,7 +365,7 @@ PROCEDURE paradox_to_csv(cDbFile,cSEPARADOR)
          ? "Erro ao criar o arquivo CSV de saida."
          PX_Close( pPxDoc )
          PX_Delete( pPxDoc )
-         RETURN
+         RETURN .F.
       ENDIF
 
       nNumRecords := PX_Get_Num_Records( pPxDoc )
@@ -397,7 +399,7 @@ PROCEDURE paradox_to_csv(cDbFile,cSEPARADOR)
 
    PX_Delete( pPxDoc )
 
-RETURN
+RETURN .T.
 
 FUNCTION Paradox_Pack( cDbFile )
    Local cTempFile := cDbFile + ".tmp"
@@ -407,6 +409,7 @@ FUNCTION Paradox_Pack( cDbFile )
    Local i, j, nFieldLen, nFieldDec, nFieldType
    Local aRow := {}
    Local lSuccess := .F.
+   Local cFieldName
 
    IF !File( cDbFile )
       ? "Erro: Arquivo Paradox nao encontrado: " + cDbFile
