@@ -47,7 +47,8 @@ FUNCTION PXRDD_GETFUNCTABLE( pFuncCount, pFuncTable, pSuperTable, nRddID )
    aMyFunc[ UR_FLUSH ]    := ( @PX_FLUSH() )
    aMyFunc[ UR_DELETE ]   := ( @PX_DELETE() )
    aMyFunc[ UR_FIELDCOUNT ]   := ( @PX_FCOUNT() )
-   aMyFunc[ UR_RECCOUNT ]   := ( @PX_RECCOUNT() )  // <-- Adicionado aqui para o LastRec()
+   aMyFunc[ UR_RECCOUNT ]   := ( @PX_RECCOUNT() ) 
+ //  aMyFunc[ UR_GETSTRUCT ] := ( @PX_DBSTRUCT() ) 
 
    RETURN USRRDD_GETFUNCTABLE( pFuncCount, pFuncTable, pSuperTable, nRddID, cSuperRDD, aMyFunc )
 
@@ -122,22 +123,31 @@ STATIC FUNCTION PX_OPEN( nWA, aOpenInfo )
       cFieldName := PX_Get_Field_Name( pPxDoc, j )
       nFieldType := PX_Get_Field_Type_And_Len( pPxDoc, j, @nFieldLen, @nFieldDec )
       
-      IF nFieldType == 1
+    IF nFieldType == 1                                  // Alpha / String ($01)
          cHarbourType := HB_FT_STRING
          nFieldDec := 0
-      ELSEIF nFieldType == 2 .OR. nFieldType == 21
+      ELSEIF nFieldType == 2 .OR. nFieldType == 21        // Date ($02) / Timestamp ($15)
          cHarbourType := HB_FT_DATE
          nFieldLen := 8
          nFieldDec := 0
-      ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .OR. nFieldType == 22
-         cHarbourType := HB_FT_INTEGER
+      ELSEIF nFieldType == 3                              // Short integer ($03) - 2 bytes
+         cHarbourType := HB_FT_LONG
+         nFieldLen := 6
          nFieldDec := 0
-      ELSEIF nFieldType == 5 .OR. nFieldType == 6
+      ELSEIF nFieldType == 4 .OR. nFieldType == 16        // Long integer ($04) / AutoInc ($16) - 4 bytes
+         cHarbourType := HB_FT_LONG
+         nFieldLen := 10
+         nFieldDec := 0
+      ELSEIF nFieldType == 5 .OR. nFieldType == 6 .OR. nFieldType == 17 // Currency ($05), Number ($06), BCD ($17) - 8 bytes+
          cHarbourType := HB_FT_DOUBLE
          nFieldLen := Max( nFieldLen, 18 )
-      ELSEIF nFieldType == 9
+      ELSEIF nFieldType == 9                              // Logical ($09) - 1 byte
          cHarbourType := HB_FT_LOGICAL
          nFieldLen := 1
+         nFieldDec := 0
+      ELSEIF nFieldType == 12 .OR. nFieldType == 13 .OR. nFieldType == 14 // Memos / BLOBs ($0C, $0D, $0E)
+         cHarbourType := HB_FT_MEMO
+         nFieldLen := 10
          nFieldDec := 0
       ELSE
          cHarbourType := HB_FT_STRING
@@ -300,3 +310,64 @@ STATIC FUNCTION PX_RECCOUNT( nWA, nRecords )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
    nRecords := aWAData[ PX_AREA_TOTAL ]
 RETURN SUCCESS
+
+/*
+STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
+   LOCAL aWAData := USRRDD_AREADATA( nWA )
+   LOCAL nFields, j, cFieldName, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
+   LOCAL cStructType
+
+   IF aWAData[ PX_AREA_DOC ] == NIL
+      aStruct := {}
+      RETURN SUCCESS
+   ENDIF
+
+   nFields := PX_Get_Num_Fields( aWAData[ PX_AREA_DOC ] )
+   aStruct := Array( nFields, 4 )
+
+   FOR j := 0 TO nFields - 1
+      cFieldName := PX_Get_Field_Name( aWAData[ PX_AREA_DOC ], j )
+      nFieldType := PX_Get_Field_Type_And_Len( aWAData[ PX_AREA_DOC ], j, @nFieldLen, @nFieldDec )
+
+      IF nFieldType == 1                                  // Alpha -> Char ("C")
+         cStructType := "C"
+         nFieldDec   := 0
+      ELSEIF nFieldType == 2 .OR. nFieldType == 21        // Date / Timestamp -> Date ("D")
+         cStructType := "D"
+         nFieldLen   := 8
+         nFieldDec   := 0
+      ELSEIF nFieldType == 3                              // Short integer -> Numeric ("N")
+         cStructType := "N"
+         nFieldLen   := 6
+         nFieldDec   := 0
+      ELSEIF nFieldType == 4 .OR. nFieldType == 16        // Long integer / AutoInc -> Numeric ("N")
+         cStructType := "N"
+         nFieldLen   := 10
+         nFieldDec   := 0
+      ELSEIF nFieldType == 5 .OR. nFieldType == 6 .OR. nFieldType == 17 // Currency / Number / BCD -> Numeric ("N") ou Double ("B")
+         cStructType := "N" // Altere para "B" se quiser manter o tipo Double nativo do Harbour
+         nFieldLen   := Max( nFieldLen, 18 )
+      ELSEIF nFieldType == 9                              // Logical -> Logical ("L")
+         cStructType := "L"
+         nFieldLen   := 1
+         nFieldDec   := 0
+      ELSEIF nFieldType == 12 .OR. nFieldType == 13 .OR. nFieldType == 14 // Memos -> Memo ("M")
+         cStructType := "M"
+         nFieldLen   := 10
+         nFieldDec   := 0
+      ELSE
+         cStructType := "C"
+      ENDIF
+
+      aStruct[ j + 1, DBS_NAME ] := cFieldName
+      aStruct[ j + 1, DBS_TYPE ] := cStructType
+      aStruct[ j + 1, DBS_LEN  ] := Max( 1, nFieldLen )
+      aStruct[ j + 1, DBS_DEC  ] := nFieldDec
+   NEXT
+
+RETURN SUCCESS
+*/
+
+
+
+
