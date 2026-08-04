@@ -46,6 +46,15 @@ HB_FUNC( PX_DELETE )
    PX_delete( pxdoc );
 }
 
+HB_FUNC( PX_DELETE2 )
+{
+   pxdoc_t *pxdoc = (pxdoc_t *) (HB_PTRDIFF) hb_parnl( 1 );
+   if( pxdoc ) {
+      PX_delete( pxdoc );
+   }
+   hb_ret();
+}
+
 HB_FUNC( PX_GET_NUM_RECORDS )
 {
    pxdoc_t *pxdoc = (pxdoc_t *) (HB_PTRDIFF) hb_parnl( 1 );

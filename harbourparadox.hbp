@@ -21,10 +21,12 @@
 # Configurações de compilação (equivalentes aos parâmetros do .bat)
 -n -w2 -gc0
 
+xhb.hbc
 paradoxpxlib.prg 
 paradoxclasse.prg 
 paradoxlib01.prg 
 paradoxlib02.prg 
+pxrdd.prg
 
 
 $hb_pkg_install.hbm
