@@ -59,26 +59,36 @@ METHOD DbStruct() CLASS ParadoxCursor
       cFieldName := PX_Get_Field_Name( ::pDoc, j )
       nFieldType := PX_Get_Field_Type_And_Len( ::pDoc, j, @nFieldLen, @nFieldDec )
       
-      IF nFieldType == 1
-         cHarbourType := "C"
+       IF nFieldType == 1                                  // Alpha / String ($01)
+         cHarbourType := "C" //HB_FT_STRING
          nFieldDec := 0
-      ELSEIF nFieldType == 2 .OR. nFieldType == 21
-         cHarbourType := "D"
+      ELSEIF nFieldType == 2 .OR. nFieldType == 21        // Date ($02) / Timestamp ($15)
+         cHarbourType := "D" //HB_FT_DATE
          nFieldLen := 8
          nFieldDec := 0
-      ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .OR. nFieldType == 22
-         cHarbourType := "N"
+      ELSEIF nFieldType == 3                              // Short integer ($03) - 2 bytes
+         cHarbourType := "N" //HB_FT_LONG
+         nFieldLen := 6
          nFieldDec := 0
-      ELSEIF nFieldType == 5 .OR. nFieldType == 6
-         cHarbourType := "N"
+      ELSEIF nFieldType == 4 .OR. nFieldType == 16        // Long integer ($04) / AutoInc ($16) - 4 bytes
+         cHarbourType := "N" //HB_FT_LONG
+         nFieldLen := 10
+         nFieldDec := 0
+      ELSEIF nFieldType == 5 .OR. nFieldType == 6 .OR. nFieldType == 17 // Currency ($05), Number ($06), BCD ($17) - 8 bytes+
+         cHarbourType := "B" //HB_FT_DOUBLE
          nFieldLen := Max( nFieldLen, 18 )
-      ELSEIF nFieldType == 9
-         cHarbourType := "L"
+      ELSEIF nFieldType == 9                              // Logical ($09) - 1 byte
+         cHarbourType := "L" //HB_FT_LOGICAL
          nFieldLen := 1
          nFieldDec := 0
+      ELSEIF nFieldType == 12 .OR. nFieldType == 13 .OR. nFieldType == 14 // Memos / BLOBs ($0C, $0D, $0E)
+         cHarbourType := "M" //HB_FT_MEMO
+         nFieldLen := 10
+         nFieldDec := 0
       ELSE
-         cHarbourType := "C"
+         cHarbourType := "C"  //HB_FT_STRING
       ENDIF
+      
 
       AAdd( aStruct, { cFieldName, cHarbourType, Max(1, nFieldLen), nFieldDec } )
    NEXT

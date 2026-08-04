@@ -1,6 +1,7 @@
 #include "dbstruct.ch"
 #INCLUDE "TRY.CH"
 #INCLUDE "DBINFO.CH"
+#INCLUDE "fileio.ch"
 
 
 
@@ -12,9 +13,10 @@
 FUNCTION PxStruct( filename )
    LOCAL aStruct := {}
    LOCAL nHandle, cHeader
-   LOCAL nHeaderSize, nNumFields, nFieldsOffset, nFieldSize
-   LOCAL i, nPos, cFieldName, cFieldType, nFieldLen, nFieldDec, cTypeByte
+   LOCAL nHeaderSize, nNumFields, nFieldsOffset
+   LOCAL i, cFieldName, cFieldType, nFieldLen, nFieldDec, cTypeByte
    LOCAL cNumFieldsBuf
+   //nFieldSize nPos
 
    IF !File( filename )
       RETURN aStruct
@@ -95,9 +97,10 @@ RETURN aStruct
 FUNCTION GetParadoxHeaderInfo( filename )
    LOCAL aParaRet := {}
    LOCAL nHandle, cHeader
-   LOCAL nRecordSize, nFileBlocks, nNumRecords, nTheNumRecords, nNumFields
-   LOCAL nMaxTableSize, nHeaderSize, nFirstBlock, nLastBlock, nFileVer
+   LOCAL nRecordSize, nNumRecords
+   LOCAL nMaxTableSize, nHeaderSize, nFileVer
    local cVerByte
+   //nFileBlocks nTheNumRecords nNumFields nFirstBlock nLastBlock
 
    IF !File( filename )
       RETURN aParaRet
