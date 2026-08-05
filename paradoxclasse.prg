@@ -7,7 +7,7 @@ CLASS ParadoxCursor
    DATA pDoc
    DATA nTotalRecords
    DATA nFields
-   DATA nRecNo        // 1 atÃ© nTotalRecords, ou nTotalRecords + 1 se EOF
+   DATA nRecNo        // 1 até nTotalRecords, ou nTotalRecords + 1 se EOF
 
    METHOD New( cFileName )
    METHOD Open()
@@ -22,16 +22,17 @@ CLASS ParadoxCursor
    METHOD LastRec()
    METHOD pack()
    
-   // --- NOVOS MÃ‰TODOS SOLICITADOS ---
-   METHOD FieldName( nFieldPos )          // Retorna o nome do campo dado o nÃºmero (1-based)
-   METHOD FieldPos( cFieldName )          // Retorna o nÃºmero do campo dado o nome
+   // --- NOVOS MÉTODOS SOLICITADOS ---
+   METHOD FieldName( nFieldPos )          // Retorna o nome do campo dado o número (1-based)
+   METHOD FieldPos( cFieldName )          // Retorna o número do campo dado o nome
    METHOD FieldGet( nFieldPos )           // Retorna o valor do campo atual
    METHOD FieldPut( nFieldPos, xValue )     // Altera o valor de um campo no registro atual
    METHOD Append( aRowData )              // Adiciona um novo registro na tabela
    METHOD Delete()                        // Marca o registro atual como deletado
    METHOD DbStruct()
+   METHOD Commit()
    
-   // --- ADICIONE ESTAS DECLARAÃ‡Ã•ES NA SUA SEÃ‡ÃƒO DE METHOD DA CLASSE ---
+   // --- ADICIONE ESTAS DECLARAÇÕES NA SUA SEÇÃO DE METHOD DA CLASSE ---
    METHOD Locate( bCondition )
    METHOD Seek( nFieldPos, xValorProcurado )
    
@@ -183,7 +184,7 @@ RETURN ::nRecNo
 METHOD LastRec() CLASS ParadoxCursor
    RETURN ::nTotalRecords
 
-// --- IMPLEMENTAÃ‡ÃƒO DOS NOVOS MÃ‰TODOS ---
+// --- IMPLEMENTAÇÃO DOS NOVOS MÉTODOS ---
 
 METHOD FieldName( nFieldPos ) CLASS ParadoxCursor
    IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
@@ -201,39 +202,52 @@ METHOD FieldPos( cFieldName ) CLASS ParadoxCursor
          RETURN j
       ENDIF
    NEXT
-RETURN 0 // NÃ£o encontrado
+RETURN 0 // Não encontrado
 
 METHOD FieldGet( nFieldPos ) CLASS ParadoxCursor
-   IF ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
-      IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
-         RETURN PX_Get_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1 )
-      ENDIF
+   IF ::pDoc == NIL .OR. ::nRecNo < 1 .OR. ::nRecNo > ::nTotalRecords
+      RETURN NIL
+   ENDIF
+   IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
+      RETURN PX_Get_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1 )
    ENDIF
 RETURN NIL
 
 METHOD FieldPut( nFieldPos, xValue ) CLASS ParadoxCursor
-   // Nota: Para alterar um registro existente, vocÃª pode atualizar o valor 
-   // e passÃ¡-lo para a rotina de gravaÃ§Ã£o/atualizaÃ§Ã£o do buffer se necessÃ¡rio.
-   // (Caso utilize estrutura de array em memÃ³ria ou update direto)
-   ? "Metodo FieldPut acionado para o campo ID: " + AllTrim( Str( nFieldPos ) )
-RETURN .T.
+   Local lOk := .F.
+
+   IF ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
+      IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
+         // Atualiza o valor diretamente no documento Paradox apontado no registro atual (0-based)
+         lOk := ( PX_Put_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1, xValue ) == 0 )
+      ENDIF
+   ENDIF
+
+RETURN lOk
+
+METHOD Commit() CLASS ParadoxCursor
+   Local lOk := .F.
+   IF ::pDoc != NIL
+      // Força a persistência/gravação do buffer atual para o arquivo físico no disco
+      lOk := ( PX_Flush( ::pDoc ) == 0 )
+   ENDIF
+RETURN lOk
 
 METHOD Append( aRowData ) CLASS ParadoxCursor
    Local nRet
-   // Utiliza a funÃ§Ã£o PX_APPEND_RECORD que jÃ¡ construÃ­mos anteriormente no C
+   // Utiliza a função PX_APPEND_RECORD que já construímos anteriormente no C
    nRet := PX_Append_Record( ::pDoc, aRowData )
    IF nRet == 0
       // Atualiza o total de registros localmente
       ::nTotalRecords := PX_Get_Num_Records( ::pDoc )
-      ::nRecNo := ::nTotalRecords // Posiciona no novo registro incluÃ­do
+      ::nRecNo := ::nTotalRecords // Posiciona no novo registro incluído
       RETURN .T.
    ENDIF
 RETURN .F.
 
 METHOD Delete() CLASS ParadoxCursor
    Local nRet
-   IF ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
-      // Chama a funÃ§Ã£o C para deletar o registro fÃ­sico baseado no Ã­ndice (0-based)
+   IF ::pDoc != NIL .AND. ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
       nRet := PX_Delete_Record( ::pDoc, ::nRecNo - 1 )
       RETURN ( nRet == 0 )
    ENDIF
@@ -250,7 +264,7 @@ METHOD Locate( bCondition ) CLASS ParadoxCursor
    Local lFound := .F.
    Local nOrigem := ::nRecNo
 
-   // Salva a posiÃ§Ã£o atual e varre atÃ© o fim
+   // Salva a posição atual e varre até o fim
    WHILE !::Eof()
       IF Eval( bCondition, Self )
          lFound := .T.
@@ -260,7 +274,7 @@ METHOD Locate( bCondition ) CLASS ParadoxCursor
    ENDDO
 
    IF !lFound
-      // Se nÃ£o achou, retorna o ponteiro para a origem
+      // Se não achou, retorna o ponteiro para a origem
       ::GoTo( nOrigem )
    ENDIF
 
@@ -278,7 +292,7 @@ METHOD Seek( nCampoPos, xValorProcurado ) CLASS ParadoxCursor
       ENDIF
    NEXT
 
-   // Se nÃ£o achar, restaura o ponteiro original
+   // Se não achar, restaura o ponteiro original
    ::GoTo( nOrigem )
 RETURN .F.
 
@@ -298,39 +312,39 @@ METHOD Pack() CLASS ParadoxCursor
 
    nFields := ::nFields
 
-   // 1. Mapeia a estrutura atual dos campos para criar a tabela temporÃ¡ria
+   // 1. Mapeia a estrutura atual dos campos para criar a tabela temporária
    FOR j := 1 TO nFields
       cFieldType := "C"
       nFieldLen := 50
       nFieldDec := 0
       
-      // Descobre os tipos reais para recriar a estrutura idÃªntica
-      // (Podemos reutilizar a lÃ³gica de tipo da pxlib ou ler o cabeÃ§alho)
+      // Descobre os tipos reais para recriar a estrutura idêntica
+      // (Podemos reutilizar a lógica de tipo da pxlib ou ler o cabeçalho)
       AAdd( aStruct, { ::FieldName( j ), "C", 50, 0 } ) // Simplificado ou ajustado conforme a struct original
    NEXT
 
-   // Nota: O ideal Ã© reutilizar a matriz exata de tipos se vocÃª jÃ¡ tiver ela mapeada.
-   // Vamos criar o documento temporÃ¡rio via pxlib:
+   // Nota: O ideal é reutilizar a matriz exata de tipos se você já tiver ela mapeada.
+   // Vamos criar o documento temporário via pxlib:
    pDocTemp := PX_New()
    IF pDocTemp == 0 .OR. pDocTemp == NIL
       RETURN .F.
    ENDIF
 
-   // Tenta criar a tabela temporÃ¡ria
+   // Tenta criar a tabela temporária
    IF PX_Create_Table( pDocTemp, cTempFile, aStruct ) == 0
-      // 2. Varre a tabela original copiando apenas os registros NÃƒO deletados
-      // (A pxlib gerencia o status de exclusÃ£o fÃ­sica no arquivo)
+      // 2. Varre a tabela original copiando apenas os registros NÃO deletados
+      // (A pxlib gerencia o status de exclusão física no arquivo)
       FOR i := 1 TO nTotal
          ::GoTo( i )
          
-         // Verifica se o registro nÃ£o estÃ¡ deletado (se nÃ£o houver marcaÃ§Ã£o de exclusÃ£o fÃ­sica)
-         // Como a pxlib retorna os dados ativos, extraÃ­mos a linha:
+         // Verifica se o registro não está deletado (se não houver marcação de exclusão física)
+         // Como a pxlib retorna os dados ativos, extraímos a linha:
          aRow := {}
          FOR j := 1 TO nFields
             AAdd( aRow, ::FieldGet( j ) )
          NEXT
          
-         // Insere no temporÃ¡rio
+         // Insere no temporário
          PX_Append_Record( pDocTemp, aRow )
       NEXT
 
