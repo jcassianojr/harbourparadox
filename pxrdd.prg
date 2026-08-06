@@ -3,6 +3,7 @@
 #include "fileio.ch"
 #include "error.ch"
 #include "dbstruct.ch"
+#include "dbinfo.ch"
 
 #define PX_AREA_DOC      1  // Ponteiro da pxlib (pPxDoc)
 #define PX_AREA_RECNO    2  // Numero do registro atual (1-based)
@@ -48,6 +49,11 @@ FUNCTION PXRDD_GETFUNCTABLE( pFuncCount, pFuncTable, pSuperTable, nRddID )
    aMyFunc[ UR_DELETE ]   := ( @PX_DELETE() )
    aMyFunc[ UR_FIELDCOUNT ]   := ( @PX_FCOUNT() )
    aMyFunc[ UR_RECCOUNT ]   := ( @PX_RECCOUNT() ) 
+   // Mapeia informações globais do RDD (hb_rddInfo)
+   aMyFunc[ UR_RDDINFO ] := ( @PX_RDDINFO() )
+   // Mapeia informações específicas da tabela/área aberta (DbInfo)
+   aMyFunc[ UR_INFO ]    := ( @PX_INFO() )
+   
  //  aMyFunc[ UR_GETSTRUCT ] := ( @PX_DBSTRUCT() ) 
 
    RETURN USRRDD_GETFUNCTABLE( pFuncCount, pFuncTable, pSuperTable, nRddID, cSuperRDD, aMyFunc )
@@ -311,7 +317,6 @@ STATIC FUNCTION PX_RECCOUNT( nWA, nRecords )
    nRecords := aWAData[ PX_AREA_TOTAL ]
 RETURN SUCCESS
 
-/* nao e necessario a rdd gera a struct com base nas definicoes files da open
 STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
    LOCAL nFields, j, cFieldName, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
@@ -366,6 +371,38 @@ STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
    NEXT
 
 RETURN SUCCESS
-*/
 
 
+// Dentro do handler de métodos do seu RDD (ex: PX_RDDPROCS ou equivalente)
+STATIC FUNCTION PX_RDDINFO( nIndex, cargo )
+   Local xRet := NIL
+
+   DO CASE
+      CASE nIndex == RDDI_TABLEEXT
+         xRet := ".db" // Extensão padrão das tabelas Paradox
+
+      CASE nIndex == RDDI_MEMOEXT
+         xRet := ".mb" // Extensão padrão de arquivos memo do Paradox (se houver)
+
+      CASE nIndex == RDDI_ORDBAGEXT
+         xRet := ".px" // Extensão padrão de índices do Paradox (ou .val / .xlg)
+   ENDCASE
+
+RETURN xRet
+
+STATIC FUNCTION PX_INFO( nWA, nItem, xArg )
+   LOCAL xRet := NIL
+
+   DO CASE
+      CASE nItem == DBI_ISDBF
+         xRet := .F.  // Indica que não é um DBF tradicional, mas sim Paradox
+
+      CASE nItem == DBI_CANPUTREC
+         xRet := .T.  // Indica que o RDD suporta inserção de registros
+
+      // Caso não seja um item tratado, repassa para o comportamento padrão do USRRDD
+      OTHERWISE
+         xRet := UR_SUPER_INFO( nWA, nItem, xArg )
+   ENDCASE
+
+RETURN xRet
