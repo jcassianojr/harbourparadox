@@ -317,6 +317,7 @@ STATIC FUNCTION PX_RECCOUNT( nWA, nRecords )
    nRecords := aWAData[ PX_AREA_TOTAL ]
 RETURN SUCCESS
 
+/* A RDD gera a struct com base na field da open
 STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
    LOCAL nFields, j, cFieldName, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
@@ -371,7 +372,7 @@ STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
    NEXT
 
 RETURN SUCCESS
-
+*/
 
 // Dentro do handler de métodos do seu RDD (ex: PX_RDDPROCS ou equivalente)
 STATIC FUNCTION PX_RDDINFO( nIndex, cargo )
