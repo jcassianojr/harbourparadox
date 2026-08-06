@@ -82,7 +82,7 @@ STATIC FUNCTION PX_OPEN( nWA, aOpenInfo )
    // Garante a chamada explícita do construtor C da pxlib
    pPxDoc := PX_New()
    
-   IF pPxDoc == NIL .OR. pPxDoc == 0
+   IF pPxDoc == NIL //.OR. pPxDoc == 0
       oError := ErrorNew()
       oError:GenCode     := EG_OPEN
       oError:SubCode     := 1000
@@ -311,7 +311,7 @@ STATIC FUNCTION PX_RECCOUNT( nWA, nRecords )
    nRecords := aWAData[ PX_AREA_TOTAL ]
 RETURN SUCCESS
 
-/*
+/* nao e necessario a rdd gera a struct com base nas definicoes files da open
 STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
    LOCAL nFields, j, cFieldName, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
@@ -367,7 +367,5 @@ STATIC FUNCTION PX_DBSTRUCT( nWA, aStruct )
 
 RETURN SUCCESS
 */
-
-
 
 

@@ -10,3 +10,8 @@ EXPORTS
     PX_get_data_short
     PX_get_data_double
     PX_get_data_alpha
+    PX_create_file
+    PX_put_record
+    PX_delete_record
+    PX_put_data_long
+    PX_put_data_double
