@@ -1,8 +1,12 @@
-*.c
-*.ch
 *.exe
 *.log
 *.o
 *.reso
 *.dll
 *.a
+/lib/win/mingw/.hbmk
+/lib/win/mingw64/.hbmk
+.hbmk/win/mingw/paradoxclasse.c
+.hbmk/win/mingw/paradoxlib01.c
+.hbmk/win/mingw/paradoxlib02.c
+.hbmk/win/mingw/paradoxpxlib.c
