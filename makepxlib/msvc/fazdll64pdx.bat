@@ -3,7 +3,8 @@ TITLE Compilando pxlib para 64-bits (MSVC)
 color 0B
 
 :: Configura o ambiente do MSVC para 64-bits (x86)
-CALL "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+rem CALL "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat" -arch=amd64
 
 
 :: Define a pasta de destino final

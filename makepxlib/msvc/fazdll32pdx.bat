@@ -3,7 +3,8 @@ TITLE Compilando pxlib para 32-bits (MSVC)
 color 0B
 
 :: Configura o ambiente do MSVC para 32-bits (x86)
-CALL "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"
+rem CALL "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat"
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat" -arch=x86
 
 :: Define a pasta de destino final
 SET DEST_DIR=C:\devprg\pxlib32
