@@ -200,11 +200,17 @@ RETURN SUCCESS
 
 STATIC FUNCTION PX_PUTVALUE( nWA, nField, xValue )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
+   
    IF aWAData[ PX_AREA_ROWBUF ] == NIL
       // Inicializa o buffer com o total de campos se nao existir
       aWAData[ PX_AREA_ROWBUF ] := Array( PX_Get_Num_Fields( aWAData[ PX_AREA_DOC ] ) )
    ENDIF
-   aWAData[ PX_AREA_ROWBUF ][ nField ] := xValue
+   
+   // Apenas grava no buffer se a validacao passar estritamente
+   IF PX_VALIDATEDATA( nWA, nField, xValue )
+      aWAData[ PX_AREA_ROWBUF ][ nField ] := xValue
+   ENDIF
+   
 RETURN SUCCESS
 
 STATIC FUNCTION PX_SKIP( nWA, nRecords )
@@ -285,11 +291,20 @@ RETURN SUCCESS
 
 STATIC FUNCTION PX_FLUSH( nWA )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
+   LOCAL nRet
+   
    IF aWAData[ PX_AREA_APPEND ] .AND. !Empty( aWAData[ PX_AREA_ROWBUF ] )
-      IF PX_Append_Record( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_ROWBUF ] ) == 0
+      nRet := PX_Append_Record( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_ROWBUF ] )
+      
+      IF nRet == 0
          aWAData[ PX_AREA_TOTAL ] := PX_Get_Num_Records( aWAData[ PX_AREA_DOC ] )
          aWAData[ PX_AREA_RECNO ] := aWAData[ PX_AREA_TOTAL ]
+      ELSE
+         // Falhou no C, dispara o runtime error
+         PX_THROWERROR( nWA, nRet, "Falha na insercao de registro", "PX_FLUSH" )
       ENDIF
+      
+      // Limpa o estado de append e zera o buffer independentemente do sucesso
       aWAData[ PX_AREA_APPEND ] := .F.
       aWAData[ PX_AREA_ROWBUF ] := NIL
    ENDIF
@@ -297,9 +312,22 @@ RETURN SUCCESS
 
 STATIC FUNCTION PX_DELETE( nWA )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
-   IF !aWAData[ PX_AREA_EOF ]
-      PX_Delete_Record( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_RECNO ] - 1 )
-      aWAData[ PX_AREA_TOTAL ] := PX_Get_Num_Records( aWAData[ PX_AREA_DOC ] )
+   LOCAL nRet
+   
+   IF !aWAData[ PX_AREA_EOF ] .AND. !aWAData[ PX_AREA_BOF ]
+      nRet := PX_Delete_Record( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_RECNO ] - 1 )
+      
+      IF nRet == 0
+         aWAData[ PX_AREA_TOTAL ] := PX_Get_Num_Records( aWAData[ PX_AREA_DOC ] )
+         
+         // Se o registro deletado era o ultimo, posiciona em EOF
+         IF aWAData[ PX_AREA_RECNO ] > aWAData[ PX_AREA_TOTAL ]
+            aWAData[ PX_AREA_RECNO ] := aWAData[ PX_AREA_TOTAL ] + 1
+            aWAData[ PX_AREA_EOF ]   := .T.
+         ENDIF
+      ELSE
+         PX_THROWERROR( nWA, nRet, "Erro ao deletar RecNo " + hb_valtostr(aWAData[ PX_AREA_RECNO ]), "PX_DELETE" )
+      ENDIF
    ENDIF
 RETURN SUCCESS
 
@@ -377,6 +405,7 @@ RETURN SUCCESS
 // Dentro do handler de métodos do seu RDD (ex: PX_RDDPROCS ou equivalente)
 STATIC FUNCTION PX_RDDINFO( nIndex, cargo )
    Local xRet := NIL
+   HB_SYMBOL_UNUSED( cargo ) 
 
    DO CASE
       CASE nIndex == RDDI_TABLEEXT
@@ -407,3 +436,68 @@ STATIC FUNCTION PX_INFO( nWA, nItem, xArg )
    ENDCASE
 
 RETURN xRet
+
+STATIC FUNCTION PX_THROWERROR( nWA, nErrorCode, cContext, cOperation )
+   LOCAL oErr := ErrorNew()
+
+   oErr:Severity    := 2 // ES_ERROR
+   oErr:GenCode     := EG_DATATYPE
+   oErr:SubSystem   := "PXRDD"
+   oErr:SubCode     := nErrorCode
+   oErr:Operation   := cOperation
+
+   DO CASE
+      CASE nErrorCode == -1
+         oErr:Description := "Parametros invalidos ou ponteiro PX_DOC nulo."
+      CASE nErrorCode == -2
+         oErr:Description := "Falha de alocacao de memoria no buffer interno."
+      CASE nErrorCode == -3
+         oErr:Description := "Erro interno da pxlib ao tentar persistir (put/append)."
+      OTHERWISE
+         oErr:Description := "Erro da pxlib (" + hb_valtostr(nErrorCode) + ")"
+   ENDCASE
+
+   oErr:Args := { cContext }
+   UR_SUPER_ERROR( nWA, oErr )
+RETURN .F.
+
+STATIC FUNCTION PX_VALIDATEDATA( nWA, nField, xValue )
+   LOCAL cExpectedType, nExpectedLen
+   LOCAL cValType := ValType( xValue )
+   LOCAL cFieldName
+
+   // Extrai os metadados do campo diretamente do USRRDD
+   UR_SUPER_FIELDINFO( nWA, nField, DBS_TYPE, @cExpectedType )
+   UR_SUPER_FIELDINFO( nWA, nField, DBS_LEN,  @nExpectedLen )
+   UR_SUPER_FIELDINFO( nWA, nField, DBS_NAME, @cFieldName )
+
+   DO CASE
+      CASE cExpectedType == "C"
+         IF cValType != "C"
+            PX_THROWERROR( nWA, 1001, "Campo " + cFieldName + " espera String", "PX_VALIDATEDATA" )
+            RETURN .F.
+         ENDIF
+         IF Len( xValue ) > nExpectedLen
+            PX_THROWERROR( nWA, 1002, "String excede tamanho do campo " + cFieldName, "PX_VALIDATEDATA" )
+            RETURN .F.
+         ENDIF
+
+      CASE cExpectedType == "N" .OR. cExpectedType == "B"
+         IF cValType != "N"
+            PX_THROWERROR( nWA, 1003, "Campo " + cFieldName + " espera Numerico", "PX_VALIDATEDATA" )
+            RETURN .F.
+         ENDIF
+
+      CASE cExpectedType == "D"
+         IF cValType != "D"
+            PX_THROWERROR( nWA, 1004, "Campo " + cFieldName + " espera Data", "PX_VALIDATEDATA" )
+            RETURN .F.
+         ENDIF
+
+      CASE cExpectedType == "L"
+         IF cValType != "L"
+            PX_THROWERROR( nWA, 1005, "Campo " + cFieldName + " espera Logico", "PX_VALIDATEDATA" )
+            RETURN .F.
+         ENDIF
+   ENDCASE
+RETURN .T.
