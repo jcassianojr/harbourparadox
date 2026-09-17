@@ -1,4 +1,5 @@
 #include "hbclass.ch"
+#include "error.ch"
 //===================================================================
 // CLASSE GERENCIADORA DE CURSOR ESTILO DBF PARA PARADOX (ATUALIZADA)
 //===================================================================
@@ -22,7 +23,6 @@ CLASS ParadoxCursor
    METHOD LastRec()
    METHOD pack()
    
-   // --- NOVOS MÉTODOS SOLICITADOS ---
    METHOD FieldName( nFieldPos )          // Retorna o nome do campo dado o número (1-based)
    METHOD FieldPos( cFieldName )          // Retorna o número do campo dado o nome
    METHOD FieldGet( nFieldPos )           // Retorna o valor do campo atual
@@ -32,9 +32,10 @@ CLASS ParadoxCursor
    METHOD DbStruct()
    METHOD Commit()
    
-   // --- ADICIONE ESTAS DECLARAÇÕES NA SUA SEÇÃO DE METHOD DA CLASSE ---
    METHOD Locate( bCondition )
    METHOD Seek( nFieldPos, xValorProcurado )
+   METHOD ValidateData( nFieldPos, xValue )
+   METHOD ThrowError( nErrorCode, cContext, cOperation )
    
    METHOD GetFields()
 ENDCLASS
