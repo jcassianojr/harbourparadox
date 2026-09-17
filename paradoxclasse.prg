@@ -47,6 +47,69 @@ METHOD New( cFileName ) CLASS ParadoxCursor
    ::nRecNo := 0
 RETURN Self
 
+METHOD ValidateData( nFieldPos, xValue ) CLASS ParadoxCursor
+   LOCAL aStruct := ::DbStruct()
+   LOCAL cExpectedType, nExpectedLen, cValType
+
+   IF nFieldPos < 1 .OR. nFieldPos > Len( aStruct )
+      RETURN .F.
+   ENDIF
+
+   cExpectedType := aStruct[ nFieldPos ][ 2 ]
+   nExpectedLen  := aStruct[ nFieldPos ][ 3 ]
+   cValType      := ValType( xValue )
+
+   DO CASE
+      CASE cExpectedType == "C"
+         IF cValType != "C"
+            ::ThrowError( 1001, "Campo " + aStruct[nFieldPos][1] + " espera String", "ValidateData" )
+         ENDIF
+         IF Len( xValue ) > nExpectedLen
+            // Trunca ou gera erro dependendo da sua regra de negócio
+            ::ThrowError( 1002, "String excede tamanho do campo " + aStruct[nFieldPos][1], "ValidateData" )
+         ENDIF
+
+      CASE cExpectedType == "N" .OR. cExpectedType == "B"
+         IF cValType != "N"
+            ::ThrowError( 1003, "Campo " + aStruct[nFieldPos][1] + " espera Numerico", "ValidateData" )
+         ENDIF
+
+      CASE cExpectedType == "D"
+         IF cValType != "D"
+            ::ThrowError( 1004, "Campo " + aStruct[nFieldPos][1] + " espera Data", "ValidateData" )
+         ENDIF
+
+      CASE cExpectedType == "L"
+         IF cValType != "L"
+            ::ThrowError( 1005, "Campo " + aStruct[nFieldPos][1] + " espera Logico", "ValidateData" )
+         ENDIF
+   ENDCASE
+RETURN .T.
+
+METHOD ThrowError( nErrorCode, cContext, cOperation ) CLASS ParadoxCursor
+   LOCAL oErr := ErrorNew()
+   
+   oErr:Severity    := 2 // ES_ERROR
+   oErr:GenCode     := EG_DATATYPE
+   oErr:SubSystem   := "PXLIB"
+   oErr:SubCode     := nErrorCode
+   oErr:Operation   := cOperation
+   
+   DO CASE
+      CASE nErrorCode == -1
+         oErr:Description := "Parametros invalidos ou ponteiro PX_DOC nulo."
+      CASE nErrorCode == -2
+         oErr:Description := "Falha de alocacao de memoria no buffer interno."
+      CASE nErrorCode == -3
+         oErr:Description := "Erro interno da pxlib ao tentar persistir (put/append)."
+      OTHERWISE
+         oErr:Description := "Erro desconhecido da pxlib (" + hb_valtostr(nErrorCode) + ")"
+   ENDCASE
+   
+   oErr:Args := { cContext }
+   Eval( ErrorBlock(), oErr )
+RETURN .F.
+
 METHOD DbStruct() CLASS ParadoxCursor
    Local j, nFieldLen := 0, nFieldDec := 0, nFieldType := 0
    Local cFieldName := "", cHarbourType := "C"
@@ -143,20 +206,21 @@ METHOD GoBottom() CLASS ParadoxCursor
 RETURN NIL
 
 METHOD Skip( nRows ) CLASS ParadoxCursor
-   IF VALTYPE(nRows)<>"N"
-      nRows:=1
+   IF ValType(nRows) != "N"
+      nRows := 1
    ENDIF
 
    IF ::nTotalRecords == 0
+      ::nRecNo := 0
       RETURN NIL
    ENDIF
 
    ::nRecNo += nRows
 
    IF ::nRecNo > ::nTotalRecords
-      ::nRecNo := ::nTotalRecords + 1 // EOF
+      ::nRecNo := ::nTotalRecords + 1 // Estado de EOF garantido
    ELSEIF ::nRecNo < 1
-      ::nRecNo := 0                  // BOF
+      ::nRecNo := 0                   // Estado de BOF garantido
    ENDIF
 RETURN NIL
 
@@ -218,8 +282,11 @@ METHOD FieldPut( nFieldPos, xValue ) CLASS ParadoxCursor
 
    IF ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
       IF nFieldPos >= 1 .AND. nFieldPos <= ::nFields
-         // Atualiza o valor diretamente no documento Paradox apontado no registro atual (0-based)
-         lOk := ( PX_Put_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1, xValue ) == 0 )
+         // Bloqueia a execução se o dado não for compatível com a estrutura
+         IF ::ValidateData( nFieldPos, xValue )
+            // Atualiza o valor diretamente no documento Paradox
+            lOk := ( PX_Put_Field_Val( ::pDoc, ::nRecNo - 1, nFieldPos - 1, xValue ) == 0 )
+         ENDIF
       ENDIF
    ENDIF
 
@@ -234,22 +301,42 @@ METHOD Commit() CLASS ParadoxCursor
 RETURN lOk
 
 METHOD Append( aRowData ) CLASS ParadoxCursor
-   Local nRet
-   // Utiliza a função PX_APPEND_RECORD que já construímos anteriormente no C
+   LOCAL nRet, i
+
+   // 1. Valida todos os campos antes de enviar para o C
+   FOR i := 1 TO Len( aRowData )
+      ::ValidateData( i, aRowData[i] )
+   NEXT
+
+   // 2. Grava via pxlib
    nRet := PX_Append_Record( ::pDoc, aRowData )
+   
    IF nRet == 0
-      // Atualiza o total de registros localmente
+      // 3. Atualiza estado e posiciona no novo registro
       ::nTotalRecords := PX_Get_Num_Records( ::pDoc )
-      ::nRecNo := ::nTotalRecords // Posiciona no novo registro incluído
+      ::nRecNo := ::nTotalRecords
       RETURN .T.
+   ELSE
+      ::ThrowError( nRet, "Falha na insercao de registro", "Append" )
    ENDIF
 RETURN .F.
 
 METHOD Delete() CLASS ParadoxCursor
-   Local nRet
-   IF ::pDoc != NIL .AND. ::nRecNo >= 1 .AND. ::nRecNo <= ::nTotalRecords
-      nRet := PX_Delete_Record( ::pDoc, ::nRecNo - 1 )
-      RETURN ( nRet == 0 )
+   LOCAL nRet
+   IF ::pDoc != NIL .AND. !::Eof() .AND. !::Bof()
+      nRet := PX_Delete_Record( ::pDoc, ::nRecNo - 1 ) //
+      
+      IF nRet == 0
+         ::nTotalRecords := PX_Get_Num_Records( ::pDoc )
+         
+         // Se o cursor estava no ultimo registro e ele foi apagado, empurra para EOF
+         IF ::nRecNo > ::nTotalRecords
+            ::nRecNo := ::nTotalRecords + 1
+         ENDIF
+         RETURN .T.
+      ELSE
+         ::ThrowError( nRet, "Erro ao deletar RecNo " + hb_valtostr(::nRecNo), "Delete" )
+      ENDIF
    ENDIF
 RETURN .F.
 
@@ -301,8 +388,8 @@ METHOD Pack() CLASS ParadoxCursor
    Local cTempFile := ::cFile + ".tmp"
    Local pDocTemp := NIL
    Local nTotal := ::LastRec()
-   Local aStruct := {}
-   Local i, j, nFields, cFieldType, nFieldLen, nFieldDec
+   Local aStruct := ::DbStruct() // Carrega a estrutura real mapeada em vez de forçar "C", 50
+   Local i, j, nFields
    Local aRow := {}
    Local lOk := .F.
 
@@ -312,33 +399,19 @@ METHOD Pack() CLASS ParadoxCursor
 
    nFields := ::nFields
 
-   // 1. Mapeia a estrutura atual dos campos para criar a tabela temporária
-   FOR j := 1 TO nFields
-      cFieldType := "C"
-      nFieldLen := 50
-      nFieldDec := 0
-      
-      // Descobre os tipos reais para recriar a estrutura idêntica
-      // (Podemos reutilizar a lógica de tipo da pxlib ou ler o cabeçalho)
-      AAdd( aStruct, { ::FieldName( j ), "C", 50, 0 } ) // Simplificado ou ajustado conforme a struct original
-   NEXT
-
-   // Nota: O ideal é reutilizar a matriz exata de tipos se você já tiver ela mapeada.
-   // Vamos criar o documento temporário via pxlib:
+   // Cria o documento temporário via pxlib
    pDocTemp := PX_New()
    IF pDocTemp == 0 .OR. pDocTemp == NIL
       RETURN .F.
    ENDIF
 
-   // Tenta criar a tabela temporária
+   // Tenta criar a tabela temporária usando a matriz exata de tipos
    IF PX_Create_Table( pDocTemp, cTempFile, aStruct ) == 0
-      // 2. Varre a tabela original copiando apenas os registros NÃO deletados
-      // (A pxlib gerencia o status de exclusão física no arquivo)
+      
+      // Varre a tabela original copiando apenas os registros NÃO deletados
       FOR i := 1 TO nTotal
          ::GoTo( i )
          
-         // Verifica se o registro não está deletado (se não houver marcação de exclusão física)
-         // Como a pxlib retorna os dados ativos, extraímos a linha:
          aRow := {}
          FOR j := 1 TO nFields
             AAdd( aRow, ::FieldGet( j ) )
@@ -354,7 +427,7 @@ METHOD Pack() CLASS ParadoxCursor
    ENDIF
 
    IF lOk
-      // 3. Substitui o arquivo original pelo limpo
+      // Substitui o arquivo original pelo limpo
       ::Close()
       IF File( ::cFile )
          Erase( ::cFile )
