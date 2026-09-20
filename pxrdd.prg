@@ -179,19 +179,34 @@ STATIC FUNCTION PX_CLOSERDD( nWA )
    IF aWAData != NIL .AND. HB_IsArray( aWAData ) .AND. Len( aWAData ) >= PX_AREA_DOC
       IF aWAData[ PX_AREA_DOC ] != NIL
          PX_Close( aWAData[ PX_AREA_DOC ] )
-         PX_Delete2( aWAData[ PX_AREA_DOC ] )
-         aWAData[ PX_AREA_DOC ] := NIL
+         // Nota: Garantir que PX_Delete e PX_Delete2 são consistentes com a sua pxlib
+         PX_Delete( aWAData[ PX_AREA_DOC ] ) 
       ENDIF
+      
+      // LIMPEZA DO ESTADO FANTASMA
+      aWAData[ PX_AREA_DOC ]    := NIL
+      aWAData[ PX_AREA_RECNO ]  := 0
+      aWAData[ PX_AREA_TOTAL ]  := 0
+      aWAData[ PX_AREA_BOF ]    := .T.
+      aWAData[ PX_AREA_EOF ]    := .T.
+      aWAData[ PX_AREA_ROWBUF ] := NIL
+      aWAData[ PX_AREA_APPEND ] := .F.
    ENDIF
    
 RETURN UR_SUPER_CLOSE( nWA )
 
 STATIC FUNCTION PX_GETVALUE( nWA, nField, xValue )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
+   
+   // VALIDAÇÃO DE SEGURANÇA
+   IF aWAData == NIL .OR. aWAData[ PX_AREA_DOC ] == NIL
+      xValue := NIL
+      RETURN FAILURE
+   ENDIF
+
    IF aWAData[ PX_AREA_APPEND ] .AND. !Empty( aWAData[ PX_AREA_ROWBUF ] )
       xValue := aWAData[ PX_AREA_ROWBUF ][ nField ]
    ELSEIF !aWAData[ PX_AREA_EOF ]
-      // RecNo e Field na pxlib iniciam em 0
       xValue := PX_Get_Field_Val( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_RECNO ] - 1, nField - 1 )
    ELSE
       xValue := NIL
@@ -201,15 +216,20 @@ RETURN SUCCESS
 STATIC FUNCTION PX_PUTVALUE( nWA, nField, xValue )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
    
+   IF aWAData == NIL .OR. aWAData[ PX_AREA_DOC ] == NIL
+      RETURN FAILURE
+   ENDIF
+   
    IF aWAData[ PX_AREA_ROWBUF ] == NIL
-      // Inicializa o buffer com o total de campos se nao existir
       aWAData[ PX_AREA_ROWBUF ] := Array( PX_Get_Num_Fields( aWAData[ PX_AREA_DOC ] ) )
    ENDIF
    
-   // Apenas grava no buffer se a validacao passar estritamente
-   IF PX_VALIDATEDATA( nWA, nField, xValue )
-      aWAData[ PX_AREA_ROWBUF ][ nField ] := xValue
+   // BLOQUEIA A GRAVAÇÃO E SINALIZA ERRO AO MOTOR
+   IF !PX_VALIDATEDATA( nWA, nField, xValue )
+      RETURN FAILURE
    ENDIF
+   
+   aWAData[ PX_AREA_ROWBUF ][ nField ] := xValue
    
 RETURN SUCCESS
 
@@ -291,20 +311,30 @@ RETURN SUCCESS
 
 STATIC FUNCTION PX_FLUSH( nWA )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
-   LOCAL nRet
+   LOCAL nRet, nFields
+   
+   IF aWAData == NIL .OR. aWAData[ PX_AREA_DOC ] == NIL
+      RETURN FAILURE
+   ENDIF
    
    IF aWAData[ PX_AREA_APPEND ] .AND. !Empty( aWAData[ PX_AREA_ROWBUF ] )
+      
+      // SANITY CHECK: Garante integridade do array antes do C
+      nFields := PX_Get_Num_Fields( aWAData[ PX_AREA_DOC ] )
+      IF Len( aWAData[ PX_AREA_ROWBUF ] ) != nFields
+         PX_THROWERROR( nWA, 1006, "Buffer de inserção incompatível com estrutura", "PX_FLUSH" )
+         RETURN FAILURE
+      ENDIF
+
       nRet := PX_Append_Record( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_ROWBUF ] )
       
       IF nRet == 0
          aWAData[ PX_AREA_TOTAL ] := PX_Get_Num_Records( aWAData[ PX_AREA_DOC ] )
          aWAData[ PX_AREA_RECNO ] := aWAData[ PX_AREA_TOTAL ]
       ELSE
-         // Falhou no C, dispara o runtime error
-         PX_THROWERROR( nWA, nRet, "Falha na insercao de registro", "PX_FLUSH" )
+         PX_THROWERROR( nWA, nRet, "Falha na inserção de registro", "PX_FLUSH" )
       ENDIF
       
-      // Limpa o estado de append e zera o buffer independentemente do sucesso
       aWAData[ PX_AREA_APPEND ] := .F.
       aWAData[ PX_AREA_ROWBUF ] := NIL
    ENDIF
@@ -313,6 +343,11 @@ RETURN SUCCESS
 STATIC FUNCTION PX_DELETE( nWA )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
    LOCAL nRet
+   
+   // FALTA ESTA VALIDAÇÃO:
+   IF aWAData == NIL .OR. aWAData[ PX_AREA_DOC ] == NIL
+      RETURN FAILURE
+   ENDIF
    
    IF !aWAData[ PX_AREA_EOF ] .AND. !aWAData[ PX_AREA_BOF ]
       nRet := PX_Delete_Record( aWAData[ PX_AREA_DOC ], aWAData[ PX_AREA_RECNO ] - 1 )
@@ -333,7 +368,9 @@ RETURN SUCCESS
 
 STATIC FUNCTION PX_FCOUNT( nWA, nFields )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
-   IF aWAData[ PX_AREA_DOC ] != NIL
+   
+   // VALIDAÇÃO SEGURA:
+   IF aWAData != NIL .AND. aWAData[ PX_AREA_DOC ] != NIL
       nFields := PX_Get_Num_Fields( aWAData[ PX_AREA_DOC ] )
    ELSE
       nFields := 0
@@ -342,7 +379,13 @@ RETURN SUCCESS
 
 STATIC FUNCTION PX_RECCOUNT( nWA, nRecords )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
-   nRecords := aWAData[ PX_AREA_TOTAL ]
+   
+   // VALIDAÇÃO SEGURA:
+   IF aWAData != NIL
+      nRecords := aWAData[ PX_AREA_TOTAL ]
+   ELSE
+      nRecords := 0
+   ENDIF
 RETURN SUCCESS
 
 /* A RDD gera a struct com base na field da open
