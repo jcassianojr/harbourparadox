@@ -1,6 +1,6 @@
 # 📘 Harbour Documentation
 
-**Generated:** 10/11/2026
+**Generated:** 10/20/2026
 **Total symbols:** 72
 
 ## 📑 Table of Contents
@@ -82,385 +82,385 @@
 
 ## ParadoxCursor
 **Type:** `class`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 4)
-
----
-
-## New
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 13)
-
----
-
-## Open
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 14)
-
----
-
-## Close
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 15)
-
----
-
-## IsOpen
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 16)
-
----
-
-## EnsureOpen
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 17)
-
----
-
-## GoTop
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 18)
-
----
-
-## GoBottom
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 19)
-
----
-
-## Skip
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 20)
-
----
-
-## GoTo
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 21)
-
----
-
-## Eof
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 22)
-
----
-
-## Bof
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 23)
-
----
-
-## RecNo
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 24)
-
----
-
-## LastRec
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 25)
-
----
-
-## Pack
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 26)
-
----
-
-## FieldName
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 28)
-
----
-
-## FieldPos
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 29)
-
----
-
-## FieldGet
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 30)
-
----
-
-## FieldPut
-**Type:** `method`
 **Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 31)
 
 ---
 
-## Append
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 32)
-
----
-
-## Delete
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 33)
-
----
-
-## DbStruct
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 34)
-
----
-
-## Commit
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 35)
-
----
-
-## Locate
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 37)
-
----
-
-## Seek
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 38)
-
----
-
-## ValidateData
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 39)
-
----
-
-## ThrowError
+## New
 **Type:** `method`
 **Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 40)
 
 ---
 
-## GetFields
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 42)
-
----
-
-## New
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 45)
-
----
-
-## IsOpen
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 53)
-
----
-
-## EnsureOpen
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 56)
-
----
-
 ## Open
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 63)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 41)
 
 ---
 
 ## Close
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 89)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 42)
+
+---
+
+## IsOpen
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 43)
+
+---
+
+## EnsureOpen
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 44)
 
 ---
 
 ## GoTop
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 101)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 45)
 
 ---
 
 ## GoBottom
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 109)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 46)
 
 ---
 
 ## Skip
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 117)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 47)
 
 ---
 
 ## GoTo
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 136)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 48)
 
 ---
 
 ## Eof
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 142)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 49)
 
 ---
 
 ## Bof
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 145)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 50)
 
 ---
 
 ## RecNo
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 148)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 51)
 
 ---
 
 ## LastRec
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 157)
-
----
-
-## FieldName
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 160)
-
----
-
-## FieldPos
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 169)
-
----
-
-## FieldGet
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 185)
-
----
-
-## FieldPut
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 199)
-
----
-
-## Append
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 215)
-
----
-
-## Delete
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 244)
-
----
-
-## Commit
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 265)
-
----
-
-## Locate
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 272)
-
----
-
-## Seek
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 295)
-
----
-
-## DbStruct
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 317)
-
----
-
-## GetFields
-**Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 365)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 52)
 
 ---
 
 ## Pack
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 377)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 53)
+
+---
+
+## FieldName
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 55)
+
+---
+
+## FieldPos
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 56)
+
+---
+
+## FieldGet
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 57)
+
+---
+
+## FieldPut
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 58)
+
+---
+
+## Append
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 59)
+
+---
+
+## Delete
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 60)
+
+---
+
+## DbStruct
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 61)
+
+---
+
+## Commit
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 62)
+
+---
+
+## Locate
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 64)
+
+---
+
+## Seek
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 65)
 
 ---
 
 ## ValidateData
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 423)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 66)
 
 ---
 
 ## ThrowError
 **Type:** `method`
-**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 461)
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 67)
+
+---
+
+## GetFields
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 69)
+
+---
+
+## New
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 85)
+
+---
+
+## IsOpen
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 107)
+
+---
+
+## EnsureOpen
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 124)
+
+---
+
+## Open
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 145)
+
+---
+
+## Close
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 185)
+
+---
+
+## GoTop
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 211)
+
+---
+
+## GoBottom
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 233)
+
+---
+
+## Skip
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 255)
+
+---
+
+## GoTo
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 288)
+
+---
+
+## Eof
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 308)
+
+---
+
+## Bof
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 325)
+
+---
+
+## RecNo
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 342)
+
+---
+
+## LastRec
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 365)
+
+---
+
+## FieldName
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 382)
+
+---
+
+## FieldPos
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 405)
+
+---
+
+## FieldGet
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 435)
+
+---
+
+## FieldPut
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 463)
+
+---
+
+## Append
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 493)
+
+---
+
+## Delete
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 536)
+
+---
+
+## Commit
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 571)
+
+---
+
+## Locate
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 592)
+
+---
+
+## Seek
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 629)
+
+---
+
+## DbStruct
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 665)
+
+---
+
+## GetFields
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 727)
+
+---
+
+## Pack
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 753)
+
+---
+
+## ValidateData
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 834)
+
+---
+
+## ThrowError
+**Type:** `method`
+**Source:** `c:\develop\harbour\paradox\paradoxclasse.prg` (line 886)
 
 ---
 
 ## PxStruct
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib01.prg` (line 13)
+**Source:** `c:\develop\harbour\paradox\paradoxlib01.prg` (line 40)
 
 ---
 
 ## GetParadoxHeaderInfo
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib01.prg` (line 97)
+**Source:** `c:\develop\harbour\paradox\paradoxlib01.prg` (line 125)
 
 ---
 
 ## ParadoxCreateTable
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 11)
+**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 51)
 
 ---
 
 ## Paradox_DbStruct
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 42)
+**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 96)
 
 ---
 
 ## Dbf_Para_Paradox
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 114)
+**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 182)
 
 ---
 
 ## paradox_to_dbf
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 229)
+**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 311)
 
 ---
 
 ## paradox_to_csv
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 342)
+**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 456)
 
 ---
 
 ## Paradox_Pack
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 415)
+**Source:** `c:\develop\harbour\paradox\paradoxlib02.prg` (line 557)
 
 ---
 
 ## PX_AREA_DOC
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 8)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 35)
 
 ### 💎 Value
 ```harbour
@@ -471,7 +471,7 @@
 
 ## PX_AREA_RECNO
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 9)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 36)
 
 ### 💎 Value
 ```harbour
@@ -482,7 +482,7 @@
 
 ## PX_AREA_TOTAL
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 10)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 37)
 
 ### 💎 Value
 ```harbour
@@ -493,7 +493,7 @@
 
 ## PX_AREA_BOF
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 11)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 38)
 
 ### 💎 Value
 ```harbour
@@ -504,7 +504,7 @@
 
 ## PX_AREA_EOF
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 12)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 39)
 
 ### 💎 Value
 ```harbour
@@ -515,7 +515,7 @@
 
 ## PX_AREA_ROWBUF
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 13)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 40)
 
 ### 💎 Value
 ```harbour
@@ -526,7 +526,7 @@
 
 ## PX_AREA_APPEND
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 14)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 41)
 
 ### 💎 Value
 ```harbour
@@ -537,7 +537,7 @@
 
 ## PX_AREA_LEN
 **Type:** `constant`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 15)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 42)
 
 ### 💎 Value
 ```harbour
@@ -548,7 +548,7 @@
 
 ## PXRDD_GETFUNCTABLE
 **Type:** `function`
-**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 29)
+**Source:** `c:\develop\harbour\paradox\pxrdd.prg` (line 83)
 
 ---
 
