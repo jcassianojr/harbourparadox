@@ -379,43 +379,64 @@ METHOD Pack() CLASS ParadoxCursor
    LOCAL pDocTemp := NIL
    LOCAL nTotal := ::LastRec()
    LOCAL aStruct := ::DbStruct() 
-   LOCAL i, j, nFields
-   LOCAL aRow := {}
+   LOCAL nBatchStart, nBatchCount, aRecords, nRow, aRow
    LOCAL lOk := .F.
 
    IF !::EnsureOpen( "Pack" ) .OR. ::nTotalRecords == 0
       RETURN .T.
    ENDIF
 
-   nFields := ::nFields
    pDocTemp := PX_New()
    IF pDocTemp == 0 .OR. pDocTemp == NIL
       RETURN .F.
    ENDIF
 
    IF PX_Create_Table( pDocTemp, cTempFile, aStruct ) == 0
-      FOR i := 1 TO nTotal
-         ::GoTo( i )
-         aRow := {}
-         FOR j := 1 TO nFields
-            AAdd( aRow, ::FieldGet( j ) )
+      nBatchStart := 0
+      lOk := .T.
+      
+      // Rotina usando Fetch em Lote (extremamente mais rapido)
+      DO WHILE nBatchStart < nTotal
+         nBatchCount := Min( 256, nTotal - nBatchStart )
+         aRecords := PX_Get_Records( ::pDoc, nBatchStart, nBatchCount )
+         
+         IF ValType( aRecords ) != "A" .OR. Len( aRecords ) != nBatchCount
+            lOk := .F.
+            EXIT
+         ENDIF
+
+         FOR nRow := 1 TO Len( aRecords )
+            aRow := aRecords[ nRow ]
+            IF PX_Append_Record( pDocTemp, aRow ) != 0
+               lOk := .F.
+               EXIT
+            ENDIF
          NEXT
-         PX_Append_Record( pDocTemp, aRow )
-      NEXT
+         
+         IF !lOk
+            EXIT
+         ENDIF
+         
+         nBatchStart += nBatchCount
+      ENDDO
 
       PX_Close( pDocTemp )
-      PX_Delete( pDocTemp )
-      lOk := .T.
    ENDIF
+
+   PX_Delete( pDocTemp )
 
    IF lOk
       ::Close()
       IF File( ::cFile )
          Erase( ::cFile )
       ENDIF
+      // Remove índices dessincronizados do paradox nativo se existirem
+      IF File( ::cFile + ".PX" )
+         Erase( ::cFile + ".PX" )
+      ENDIF
       FileCOPY( cTempFile, ::cFile )
       ::Open() 
-      ? "PACK executado com sucesso! Registros deletados removidos."
+      ? "PACK executado com sucesso via Batch! Registros deletados removidos."
    ENDIF
 
 RETURN lOk

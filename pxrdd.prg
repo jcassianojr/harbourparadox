@@ -82,17 +82,24 @@ STATIC FUNCTION PX_OPEN( nWA, aOpenInfo )
    LOCAL pPxDoc, nFields, j, aField
    LOCAL nFieldLen := 0, nFieldDec := 0, nFieldType := 0
    LOCAL oError, nResult, cHarbourType, cFileName, cFieldName
+   LOCAL lReadOnly
 
    cFileName := AllTrim( aOpenInfo[ UR_OI_NAME ] )
+
+   // Em Harbour, UR_OI_READONLY é o índice 4 (definido em rddsys.ch)
+   lReadOnly := aOpenInfo[ UR_OI_READONLY ]
+   IF ValType( lReadOnly ) != "L"
+      lReadOnly := .F.
+   ENDIF
 
    // Garante a chamada explícita do construtor C da pxlib
    pPxDoc := PX_New()
    
-   IF pPxDoc == NIL //.OR. pPxDoc == 0
+   IF pPxDoc == NIL
       oError := ErrorNew()
       oError:GenCode     := EG_OPEN
       oError:SubCode     := 1000
-      oError:Description := hb_langErrMsg( EG_OPEN ) + ", Falha crítica: ponteiro PX_New() retornou nulo."
+      oError:Description := hb_langErrMsg( EG_OPEN ) + ", Falha critica: ponteiro PX_New() retornou nulo."
       oError:FileName    := cFileName
       oError:CanDefault  := .T.
       UR_SUPER_ERROR( nWA, oError )
@@ -101,8 +108,14 @@ STATIC FUNCTION PX_OPEN( nWA, aOpenInfo )
 
    aWAData[ PX_AREA_DOC ] := pPxDoc
 
-   // Abre o arquivo físico validando o ponteiro alocado
-   IF PX_Open_File( pPxDoc, cFileName ) != 0
+   // Usa leitura otimizada sem locks se solicitado ReadOnly, caso contrario abre com permissão de escrita
+   IF lReadOnly
+      nResult := PX_Open_File_ReadOnly( pPxDoc, cFileName )
+   ELSE
+      nResult := PX_Open_File( pPxDoc, cFileName )
+   ENDIF
+
+   IF nResult != 0
       PX_Delete( pPxDoc )
       aWAData[ PX_AREA_DOC ] := NIL
       oError := ErrorNew()
@@ -129,29 +142,29 @@ STATIC FUNCTION PX_OPEN( nWA, aOpenInfo )
       cFieldName := PX_Get_Field_Name( pPxDoc, j )
       nFieldType := PX_Get_Field_Type_And_Len( pPxDoc, j, @nFieldLen, @nFieldDec )
       
-    IF nFieldType == 1                                  // Alpha / String ($01)
+      IF nFieldType == 1
          cHarbourType := HB_FT_STRING
          nFieldDec := 0
-      ELSEIF nFieldType == 2 .OR. nFieldType == 21        // Date ($02) / Timestamp ($15)
+      ELSEIF nFieldType == 2 .OR. nFieldType == 21
          cHarbourType := HB_FT_DATE
          nFieldLen := 8
          nFieldDec := 0
-      ELSEIF nFieldType == 3                              // Short integer ($03) - 2 bytes
+      ELSEIF nFieldType == 3
          cHarbourType := HB_FT_LONG
          nFieldLen := 6
          nFieldDec := 0
-      ELSEIF nFieldType == 4 .OR. nFieldType == 16        // Long integer ($04) / AutoInc ($16) - 4 bytes
+      ELSEIF nFieldType == 4 .OR. nFieldType == 16
          cHarbourType := HB_FT_LONG
          nFieldLen := 10
          nFieldDec := 0
-      ELSEIF nFieldType == 5 .OR. nFieldType == 6 .OR. nFieldType == 17 // Currency ($05), Number ($06), BCD ($17) - 8 bytes+
+      ELSEIF nFieldType == 5 .OR. nFieldType == 6 .OR. nFieldType == 17
          cHarbourType := HB_FT_DOUBLE
          nFieldLen := Max( nFieldLen, 18 )
-      ELSEIF nFieldType == 9                              // Logical ($09) - 1 byte
+      ELSEIF nFieldType == 9
          cHarbourType := HB_FT_LOGICAL
          nFieldLen := 1
          nFieldDec := 0
-      ELSEIF nFieldType == 12 .OR. nFieldType == 13 .OR. nFieldType == 14 // Memos / BLOBs ($0C, $0D, $0E)
+      ELSEIF nFieldType == 12 .OR. nFieldType == 13 .OR. nFieldType == 14
          cHarbourType := HB_FT_MEMO
          nFieldLen := 10
          nFieldDec := 0
@@ -171,7 +184,6 @@ STATIC FUNCTION PX_OPEN( nWA, aOpenInfo )
 
    nResult := UR_SUPER_OPEN( nWA, aOpenInfo )
 RETURN nResult
-
 
 STATIC FUNCTION PX_CLOSERDD( nWA )
    LOCAL aWAData := USRRDD_AREADATA( nWA )
