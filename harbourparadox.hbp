@@ -5,20 +5,20 @@
 -hbx=${hb_name}.hbx
 
 
-# Nome da biblioteca de saída
+# Nome da biblioteca de saï¿½da
 #-o./lib/harbourparadox
 -olib/${hb_plat}/${hb_comp}/${hb_name}
 
 {!xhb}-hbx=harbourparadox.hbx
 {!xhb}harbourparadox.hbx
 
--Ic:\harbour\hb3rd\pxlib\include\
+-I.
 
 # Modo biblioteca
 -hblib
 -inc
 
-# Configurações de compilação (equivalentes aos parâmetros do .bat)
+# Configuraï¿½ï¿½es de compilaï¿½ï¿½o (equivalentes aos parï¿½metros do .bat)
 -n -w2 -gc0
 
 xhb.hbc

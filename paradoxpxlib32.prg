@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "pxlib_harbour_batch.h"
 
 HB_FUNC( PX_NEW )
 {
@@ -16,7 +17,7 @@ HB_FUNC( PX_OPEN_FILE )
 {
    pxdoc_t *pxdoc = (pxdoc_t *) (HB_PTRDIFF) hb_parnl( 1 );
    const char *filename = hb_parc( 2 );
-   hb_retni( PX_open_file( pxdoc, (char * ) filename ) );
+   hb_retni( pxdoc && filename ? PX_open_file( pxdoc, filename ) : -1 );
 }
 
 HB_FUNC( PX_OPEN_FILE2 )
@@ -31,7 +32,7 @@ HB_FUNC( PX_OPEN_FILE2 )
       return;
    }
 
-   hb_retni( PX_open_file( pxdoc, (char * ) filename ) );
+   hb_retni( PX_open_file( pxdoc, filename ) );
 }
 
 HB_FUNC( PX_CLOSE )
@@ -85,11 +86,26 @@ HB_FUNC( PX_GET_FIELD_VAL )
    int recno = hb_parni( 2 );
    int fieldno = hb_parni( 3 );
    
+   if( !pxdoc || !pxdoc->px_head || recno < 0 ||
+       fieldno < 0 || fieldno >= pxdoc->px_head->px_numfields ) {
+      hb_ret();
+      return;
+   }
+
    char *data = (char *) malloc( pxdoc->px_head->px_recordsize );
-   if( data ) {
-      memset(data, 0, pxdoc->px_head->px_recordsize);
-      PX_get_record(pxdoc, recno, data);
-      
+   if( !data ) {
+      hb_ret();
+      return;
+   }
+
+   memset(data, 0, pxdoc->px_head->px_recordsize);
+   if( !PX_get_record(pxdoc, recno, data) ) {
+      free( data );
+      hb_ret();
+      return;
+   }
+
+   {
       pxfield_t *field = &pxdoc->px_head->px_fields[fieldno];
       
       int total_len = 0;
@@ -230,6 +246,11 @@ HB_FUNC( PX_GET_FIELD_VAL )
             free( valstr );
          } else {
             char *buf = (char *) malloc( field->px_flen + 1 );
+            if( !buf ) {
+               free( data );
+               hb_ret();
+               return;
+            }
             memcpy( buf, field_ptr, field->px_flen );
             buf[field->px_flen] = '\0';
             for( int z = 0; z < field->px_flen; z++ ) {
@@ -240,8 +261,6 @@ HB_FUNC( PX_GET_FIELD_VAL )
          }
       }
       free( data );
-   } else {
-      hb_retc( "ERR_MEM" );
    }
 }
 

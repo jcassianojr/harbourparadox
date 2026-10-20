@@ -21,6 +21,7 @@ Este projeto reúne três partes principais:
 
 3. **Integração com `pxlib`**
    - Ponte em C usando `#pragma BEGINDUMP` para usar funções como `PX_new`, `PX_open_file`, `PX_get_record`, `PX_put_record` e demais operações da biblioteca nativa.
+   - `PX_OPEN_FILE_READONLY` abre tabelas sem solicitar acesso de escrita; `PX_GET_RECORDS` retorna lotes contíguos como matriz de registros e libera os valores nativos após convertê-los para Harbour.
 
 Além disso, há suporte a exportação para `DBF/CDX` e `CSV`, além de utilitários em Python para inspeção e conversão das tabelas.
 
@@ -43,7 +44,7 @@ Além disso, há suporte a exportação para `DBF/CDX` e `CSV`, além de utilit�
 ## Requisitos
 
 - **Harbour** 3.2+ com `hbmk2`
-- **Biblioteca `pxlib`** instalada e acessível via headers e biblioteca (`libpx.a`, `.dll` ou equivalente)
+- **Biblioteca `pxlib` 0.6.11+** instalada e acessível via headers e biblioteca (`libpx.a`, `.dll` ou equivalente)
 - **Compilador C** compatível com o ambiente Windows (MinGW/MSYS ou MSVC)
 - **Python 3** (opcional, para os utilitários da pasta `pythonpxlib`)
 
@@ -61,7 +62,7 @@ complibw64.bat
 complibw32.bat
 ```
 
-Esses scripts executam o `hbmk2.exe` com o arquivo `harbourparadox.hbp`, utilizando a include path da `pxlib`.
+Esses scripts executam o `hbmk2.exe` com o arquivo `harbourparadox.hbp` e selecionam os arquivos da `pxlib` conforme a arquitetura: `C:\harbour\hb3rd\pxlib32` para 32 bits e `C:\harbour\hb3rd\pxlib64` para 64 bits. Cada pasta deve conter `include\paradox.h` e `lib\libpx.a`. Os scripts de teste em `testes/` usam a mesma separação.
 
 Para compilar os testes de exemplo:
 

@@ -231,11 +231,12 @@ function  paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
  //  Local cDbfFile := "siglas_convertido.dbf"
    Local pPxDoc   := NIL
    Local nNumRecords := 0, nNumFields := 0
-   Local i, j
+   Local j, nBatchStart, nBatchCount, nRow, aRecords
    Local aStruct := {}
    Local cFieldName, nFieldType, nFieldLen, nFieldDec
    Local xVal
    Local cDbfFile
+   Local lReadOk := .T.
    
    
    IF VALTYPE(cDRIVEDES)<>"C"
@@ -262,7 +263,7 @@ function  paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
       RETURN .f.
    ENDIF
 
-   IF PX_Open_File( pPxDoc, cDbFile ) == 0
+   IF PX_Open_File_ReadOnly( pPxDoc, cDbFile ) == 0
       nNumRecords := PX_Get_Num_Records( pPxDoc )
       nNumfields  := PX_Get_Num_Fields( pPxDoc )
 
@@ -286,10 +287,14 @@ function  paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
             AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
          ELSEIF nFieldType == 2 .OR. nFieldType == 21
             AAdd( aStruct, { cFieldName, "D", 8, 0 } )
+         ELSEIF nFieldType == 9
+            AAdd( aStruct, { cFieldName, "L", 1, 0 } )
          ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .or. nFieldType == 22
             AAdd( aStruct, { cFieldName, "N", Max(1, nFieldLen), 0 } )
          ELSEIF nFieldType == 5 .OR. nFieldType == 6
             AAdd( aStruct, { cFieldName, "N", 18, 4 } )
+         ELSEIF nFieldType == 20
+            AAdd( aStruct, { cFieldName, "N", 10, 0 } )
          ELSE
             // Fallback genérico para caracteres caso encontre outro tipo
             AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
@@ -307,36 +312,49 @@ function  paradox_to_dbf(cDbFile,cDRIVEDES,lincdados)
 // 3. Varre todos os registros do Paradox e grava no DBF
 
          IF lincdados
-            FOR i := 0 TO nNumRecords - 1
-               ( "TRG" )->( DbAppend() )
-               
-               FOR j := 0 TO nNumfields - 1
-                  xVal := PX_Get_Field_Val( pPxDoc, i, j )
-                  
-                  // Se o campo do DBF for do tipo Data (D)
-                  IF aStruct[j + 1][2] == "D"
-                     IF ValType( xVal ) == "C" .AND. Len( xVal ) >= 10 .AND. SubStr( xVal, 5, 1 ) == '-'
-                        TRG->( FieldPut( j + 1, StoD( SubStr( xVal, 1, 4 ) + SubStr( xVal, 6, 2 ) + SubStr( xVal, 9, 2 ) ) ) )
+            nBatchStart := 0
+            DO WHILE nBatchStart < nNumRecords
+               nBatchCount := Min( 256, nNumRecords - nBatchStart )
+               aRecords := PX_Get_Records( pPxDoc, nBatchStart, nBatchCount )
+               IF ValType( aRecords ) != "A" .OR. Len( aRecords ) != nBatchCount
+                  lReadOk := .F.
+                  EXIT
+               ENDIF
+
+               FOR nRow := 1 TO Len( aRecords )
+                  ( "TRG" )->( DbAppend() )
+                  FOR j := 0 TO nNumfields - 1
+                     xVal := aRecords[ nRow ][ j + 1 ]
+                     IF aStruct[ j + 1 ][ 2 ] == "D"
+                        IF ValType( xVal ) == "C" .AND. Len( xVal ) >= 10 .AND. SubStr( xVal, 5, 1 ) == '-'
+                           TRG->( FieldPut( j + 1, StoD( SubStr( xVal, 1, 4 ) + SubStr( xVal, 6, 2 ) + SubStr( xVal, 9, 2 ) ) ) )
+                        ELSE
+                           TRG->( FieldPut( j + 1, CToD( "" ) ) )
+                        ENDIF
                      ELSE
-                        TRG->( FieldPut( j + 1, CToD( "" ) ) )
+                        TRG->( FieldPut( j + 1, xVal ) )
                      ENDIF
-                  ELSE
-                     TRG->( FieldPut( j + 1, xVal ) )
-                  ENDIF
+                  NEXT
                NEXT
-            NEXT
+               nBatchStart += nBatchCount
+            ENDDO
          ENDIF
 
       ( "TRG" )->( DbCloseArea() )
       PX_Close( pPxDoc )
-      ? "Migracao de dados concluida com sucesso para: " + cDbfFile
+      IF lReadOk
+         ? "Migracao de dados concluida com sucesso para: " + cDbfFile
+      ELSE
+         ? "Erro ao ler registros Paradox durante a conversao."
+      ENDIF
    ELSE
-      ? "Erro ao abrir o arquivo Paradox via PX_Open_File."
+      ? "Erro ao abrir o arquivo Paradox via PX_Open_File_ReadOnly."
+      lReadOk := .F.
    ENDIF
 
    PX_Delete( pPxDoc )
 
-RETURN .T.
+RETURN lReadOk
 
 
 function  paradox_to_csv(cDbFile,cSEPARADOR)
@@ -346,8 +364,9 @@ function  paradox_to_csv(cDbFile,cSEPARADOR)
    Local nHandleCsv
    Local pPxDoc   := NIL
    Local nNumRecords := 0, nNumFields := 0
-   Local i, j
+   Local j, nBatchStart, nBatchCount, nRow, aRecords
    Local cFieldNames := "", cRowData := ""
+   Local lSuccess := .F.
    
    cCsvFile=HB_FNAMEEXTSET(cDbFile)
 
@@ -369,7 +388,7 @@ function  paradox_to_csv(cDbFile,cSEPARADOR)
       RETURN .F.
    ENDIF
 
-   IF PX_Open_File( pPxDoc, cDbFile ) == 0
+   IF PX_Open_File_ReadOnly( pPxDoc, cDbFile ) == 0
       
       nHandleCsv := FCreate( cCsvFile )
       IF nHandleCsv == -1
@@ -392,33 +411,47 @@ function  paradox_to_csv(cDbFile,cSEPARADOR)
       FWrite( nHandleCsv, cFieldNames + hb_eol() )
 
       // Varre todos os registros da tabela Paradox
-      FOR i := 0 TO nNumRecords - 1
-         cRowData := ""
-         FOR j := 0 TO nNumfields - 1
-            cRowData += hb_valtostr( PX_Get_Field_Val( pPxDoc, i, j ) ) + If( j < nNumfields - 1, cSEPARADOR, "" )
+      nBatchStart := 0
+      DO WHILE nBatchStart < nNumRecords
+         nBatchCount := Min( 256, nNumRecords - nBatchStart )
+         aRecords := PX_Get_Records( pPxDoc, nBatchStart, nBatchCount )
+         IF ValType( aRecords ) != "A" .OR. Len( aRecords ) != nBatchCount
+            FClose( nHandleCsv )
+            PX_Close( pPxDoc )
+            PX_Delete( pPxDoc )
+            RETURN .F.
+         ENDIF
+
+         FOR nRow := 1 TO Len( aRecords )
+            cRowData := ""
+            FOR j := 1 TO nNumfields
+               cRowData += hb_valtostr( aRecords[ nRow ][ j ] ) + If( j < nNumfields, cSEPARADOR, "" )
+            NEXT
+            FWrite( nHandleCsv, cRowData + hb_eol() )
          NEXT
-         
-         FWrite( nHandleCsv, cRowData + hb_eol() )
-      NEXT
+         nBatchStart += nBatchCount
+      ENDDO
 
       FClose( nHandleCsv )
       PX_Close( pPxDoc )
+      lSuccess := .T.
       ? "Arquivo CSV gerado com sucesso: " + cCsvFile
    ELSE
-      ? "Erro ao abrir o arquivo Paradox via PX_Open_File."
+      ? "Erro ao abrir o arquivo Paradox via PX_Open_File_ReadOnly."
    ENDIF
 
    PX_Delete( pPxDoc )
 
-RETURN .T.
+RETURN lSuccess
 
 FUNCTION Paradox_Pack( cDbFile )
    Local cTempFile := cDbFile + ".tmp"
    Local pDocOrig := NIL, pDocTemp := NIL
    Local nTotalRecords := 0, nNumFields := 0
    Local aStruct := {}
-   Local i, j, nFieldLen, nFieldDec, nFieldType
+   Local j, nFieldLen, nFieldDec, nFieldType
    Local aRow := {}
+   Local aRecords, nBatchStart, nBatchCount, nRow
    Local lSuccess := .F.
    Local cFieldName
 
@@ -433,7 +466,7 @@ FUNCTION Paradox_Pack( cDbFile )
       RETURN .F.
    ENDIF
 
-   IF PX_Open_File( pDocOrig, cDbFile ) != 0
+   IF PX_Open_File_ReadOnly( pDocOrig, cDbFile ) != 0
       PX_Delete( pDocOrig )
       RETURN .F.
    ENDIF
@@ -457,10 +490,14 @@ FUNCTION Paradox_Pack( cDbFile )
          AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
       ELSEIF nFieldType == 2 .OR. nFieldType == 21
          AAdd( aStruct, { cFieldName, "D", 8, 0 } )
+      ELSEIF nFieldType == 9
+         AAdd( aStruct, { cFieldName, "L", 1, 0 } )
       ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .OR. nFieldType == 22
          AAdd( aStruct, { cFieldName, "N", Max(1, nFieldLen), 0 } )
       ELSEIF nFieldType == 5 .OR. nFieldType == 6
          AAdd( aStruct, { cFieldName, "N", 18, 4 } )
+      ELSEIF nFieldType == 20
+         AAdd( aStruct, { cFieldName, "N", 10, 0 } )
       ELSE
          AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
       ENDIF
@@ -477,18 +514,28 @@ FUNCTION Paradox_Pack( cDbFile )
    IF PX_Create_Table( pDocTemp, cTempFile, aStruct ) == 0
       
       // 4. Copia os registros (a pxlib omite os deletados automaticamente ao iterar)
-      FOR i := 0 TO nTotalRecords - 1
-         aRow := {}
-         FOR j := 0 TO nNumFields - 1
-            AAdd( aRow, PX_Get_Field_Val( pDocOrig, i, j ) )
+      nBatchStart := 0
+      DO WHILE nBatchStart < nTotalRecords
+         nBatchCount := Min( 256, nTotalRecords - nBatchStart )
+         aRecords := PX_Get_Records( pDocOrig, nBatchStart, nBatchCount )
+         IF ValType( aRecords ) != "A" .OR. Len( aRecords ) != nBatchCount
+            EXIT
+         ENDIF
+
+         FOR nRow := 1 TO Len( aRecords )
+            aRow := aRecords[ nRow ]
+            IF PX_Append_Record( pDocTemp, aRow ) != 0
+               EXIT
+            ENDIF
          NEXT
-         
-         // Grava no arquivo temporário limpo
-         PX_Append_Record( pDocTemp, aRow )
-      NEXT
+         IF nRow <= Len( aRecords )
+            EXIT
+         ENDIF
+         nBatchStart += nBatchCount
+      ENDDO
 
       PX_Close( pDocTemp )
-      lSuccess := .T.
+      lSuccess := nBatchStart >= nTotalRecords
    ENDIF
 
    PX_Close( pDocOrig )
