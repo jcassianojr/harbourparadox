@@ -12,7 +12,12 @@
 {!xhb}-hbx=harbourparadox.hbx
 {!xhb}harbourparadox.hbx
 
--I.
+-depkeyhead=pxlib:paradox.h
+-depcontrol=pxlib:${HB_WITH_PXLIB}
+{x86}-depincpath=pxlib:C:/harbour/hb3rd/pxlib32/include
+{x86_64}-depincpath=pxlib:C:/harbour/hb3rd/pxlib64/include
+{x86}-depimplibs=pxlib:C:/harbour/hb3rd/pxlib32/bin/pxlib.dll
+{x86_64}-depimplibs=pxlib:C:/harbour/hb3rd/pxlib64/bin/pxlib.dll
 
 # Modo biblioteca
 -hblib

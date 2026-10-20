@@ -62,7 +62,9 @@ complibw64.bat
 complibw32.bat
 ```
 
-Esses scripts executam o `hbmk2.exe` com o arquivo `harbourparadox.hbp` e selecionam os arquivos da `pxlib` conforme a arquitetura: `C:\harbour\hb3rd\pxlib32` para 32 bits e `C:\harbour\hb3rd\pxlib64` para 64 bits. Cada pasta deve conter `include\paradox.h` e `lib\libpx.a`. Os scripts de teste em `testes/` usam a mesma separação.
+Esses scripts executam o `hbmk2.exe` com o arquivo `harbourparadox.hbp` e selecionam os arquivos da `pxlib` conforme a arquitetura: `C:\harbour\hb3rd\pxlib32` para 32 bits e `C:\harbour\hb3rd\pxlib64` para 64 bits. Cada pasta deve conter `include\paradox.h` e `bin\pxlib.dll`. O `hbmk2` gera o import library MinGW `libpxlib.a` ao lado da biblioteca Harbour: `lib\win\mingw` para 32 bits e `lib\win\mingw64` para 64 bits. Os scripts de teste em `testes/` primeiro compilam a biblioteca com o mesmo fluxo.
+
+O arquivo `harbourparadox.hbc` declara `harbourparadox` e `pxlib` como dependências e procura as bibliotecas em `lib/${hb_plat}/${hb_comp}`; ao instalar pelo mecanismo `$hb_pkg_install.hbm`, mantenha junto os arquivos dessa pasta de plataforma.
 
 Para compilar os testes de exemplo:
 
