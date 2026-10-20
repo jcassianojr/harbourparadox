@@ -72,10 +72,11 @@ PROCEDURE testedbparadbf()
    Local cDbfFile := "clientes_convertido.dbf"
    Local pPxDoc   := NIL
    Local nNumRecords := 0, nNumFields := 0
-   Local i, j, k
+   Local j, nBatchStart, nBatchCount, nRow, aRecords
    Local aStruct := {}
    Local cFieldName, nFieldType, nFieldLen, nFieldDec
    Local xVal
+   Local lReadOk := .T.
 
    RddSetDefault( "DBFCDX" )
    
@@ -97,7 +98,7 @@ PROCEDURE testedbparadbf()
       RETURN
    ENDIF
 
-   IF PX_Open_File( pPxDoc, cDbFile ) == 0
+   IF PX_Open_File_ReadOnly( pPxDoc, cDbFile ) == 0
       nNumRecords := PX_Get_Num_Records( pPxDoc )
       nNumfields  := PX_Get_Num_Fields( pPxDoc )
 
@@ -121,10 +122,14 @@ PROCEDURE testedbparadbf()
             AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
          ELSEIF nFieldType == 2 .OR. nFieldType == 21
             AAdd( aStruct, { cFieldName, "D", 8, 0 } )
+         ELSEIF nFieldType == 9
+            AAdd( aStruct, { cFieldName, "L", 1, 0 } )
          ELSEIF nFieldType >= 3 .AND. nFieldType <= 4 .or. nFieldType == 22
             AAdd( aStruct, { cFieldName, "N", Max(1, nFieldLen), 0 } )
          ELSEIF nFieldType == 5 .OR. nFieldType == 6
             AAdd( aStruct, { cFieldName, "N", 18, 4 } )
+         ELSEIF nFieldType == 20
+            AAdd( aStruct, { cFieldName, "N", 10, 0 } )
          ELSE
             // Fallback genérico para caracteres caso encontre outro tipo
             AAdd( aStruct, { cFieldName, "C", Max(1, nFieldLen), 0 } )
@@ -139,32 +144,45 @@ PROCEDURE testedbparadbf()
       DbCreate( cDbfFile, aStruct, "DBFCDX", .T., "TRG" )
       ? "Arquivo DBF criado com sucesso: " + cDbfFile
 
-// 3. Varre todos os registros do Paradox e grava no DBF
-            FOR i := 0 TO nNumRecords - 1
-               ( "TRG" )->( DbAppend() )
-               
-               FOR j := 0 TO nNumfields - 1
-                  xVal := PX_Get_Field_Val( pPxDoc, i, j )
-                  
-                  // Se o campo do DBF for do tipo Data (D)
-                  IF aStruct[j + 1][2] == "D"
-                     IF ValType( xVal ) == "C" .AND. Len( xVal ) >= 10 .AND. SubStr( xVal, 5, 1 ) == '-'
-                        TRG->( FieldPut( j + 1, StoD( SubStr( xVal, 1, 4 ) + SubStr( xVal, 6, 2 ) + SubStr( xVal, 9, 2 ) ) ) )
-                     ELSE
-                        TRG->( FieldPut( j + 1, CToD( "" ) ) )
-                     ENDIF
+      // 3. Varre os registros em lotes e grava no DBF
+      nBatchStart := 0
+      DO WHILE nBatchStart < nNumRecords
+         nBatchCount := Min( 256, nNumRecords - nBatchStart )
+         aRecords := PX_Get_Records( pPxDoc, nBatchStart, nBatchCount )
+         IF ValType( aRecords ) != "A" .OR. Len( aRecords ) != nBatchCount
+            lReadOk := .F.
+            EXIT
+         ENDIF
+
+         FOR nRow := 1 TO Len( aRecords )
+            ( "TRG" )->( DbAppend() )
+            FOR j := 1 TO nNumfields
+               xVal := aRecords[ nRow ][ j ]
+               IF aStruct[ j ][ 2 ] == "D"
+                  IF ValType( xVal ) == "C" .AND. Len( xVal ) >= 10 .AND. SubStr( xVal, 5, 1 ) == '-'
+                     TRG->( FieldPut( j, StoD( SubStr( xVal, 1, 4 ) + SubStr( xVal, 6, 2 ) + SubStr( xVal, 9, 2 ) ) ) )
                   ELSE
-                     TRG->( FieldPut( j + 1, xVal ) )
+                     TRG->( FieldPut( j, CToD( "" ) ) )
                   ENDIF
-               NEXT
+               ELSE
+                  TRG->( FieldPut( j, xVal ) )
+               ENDIF
             NEXT
+         NEXT
+         nBatchStart += nBatchCount
+      ENDDO
 
 
       ( "TRG" )->( DbCloseArea() )
       PX_Close( pPxDoc )
-      ? "Migracao de dados concluida com sucesso para: " + cDbfFile
+      IF lReadOk
+         ? "Migracao de dados concluida com sucesso para: " + cDbfFile
+      ELSE
+         ? "Erro ao ler registros Paradox durante a conversao."
+      ENDIF
    ELSE
-      ? "Erro ao abrir o arquivo Paradox via PX_Open_File."
+      ? "Erro ao abrir o arquivo Paradox via PX_Open_File_ReadOnly."
+      lReadOk := .F.
    ENDIF
 
    PX_Delete( pPxDoc )
@@ -180,7 +198,7 @@ PROCEDURE testedbtocsv()
    Local nHandleCsv
    Local pPxDoc   := NIL
    Local nNumRecords := 0, nNumFields := 0
-   Local i, j
+   Local j, nBatchStart, nBatchCount, nRow, aRecords
    Local cFieldNames := "", cRowData := ""
 
    IF !File( cDbFile )
@@ -197,7 +215,7 @@ PROCEDURE testedbtocsv()
       RETURN
    ENDIF
 
-   IF PX_Open_File( pPxDoc, cDbFile ) == 0
+   IF PX_Open_File_ReadOnly( pPxDoc, cDbFile ) == 0
       
       nHandleCsv := FCreate( cCsvFile )
       IF nHandleCsv == -1
@@ -220,20 +238,32 @@ PROCEDURE testedbtocsv()
       FWrite( nHandleCsv, cFieldNames + hb_eol() )
   
       // Varre todos os registros da tabela Paradox
-      FOR i := 0 TO nNumRecords - 1
-         cRowData := ""
-         FOR j := 0 TO nNumfields - 1
-            cRowData += hb_valtostr( PX_Get_Field_Val( pPxDoc, i, j ) ) + If( j < nNumfields - 1, ";", "" )
+      nBatchStart := 0
+      DO WHILE nBatchStart < nNumRecords
+         nBatchCount := Min( 256, nNumRecords - nBatchStart )
+         aRecords := PX_Get_Records( pPxDoc, nBatchStart, nBatchCount )
+         IF ValType( aRecords ) != "A" .OR. Len( aRecords ) != nBatchCount
+            FClose( nHandleCsv )
+            PX_Close( pPxDoc )
+            PX_Delete( pPxDoc )
+            RETURN
+         ENDIF
+
+         FOR nRow := 1 TO Len( aRecords )
+            cRowData := ""
+            FOR j := 1 TO nNumfields
+               cRowData += hb_valtostr( aRecords[ nRow ][ j ] ) + If( j < nNumfields, ";", "" )
+            NEXT
+            FWrite( nHandleCsv, cRowData + hb_eol() )
          NEXT
-         
-         FWrite( nHandleCsv, cRowData + hb_eol() )
-      NEXT
+         nBatchStart += nBatchCount
+      ENDDO
 
       FClose( nHandleCsv )
       PX_Close( pPxDoc )
       ? "Arquivo CSV gerado com sucesso: " + cCsvFile
    ELSE
-      ? "Erro ao abrir o arquivo Paradox via PX_Open_File."
+      ? "Erro ao abrir o arquivo Paradox via PX_Open_File_ReadOnly."
    ENDIF
 
    PX_Delete( pPxDoc )
@@ -247,6 +277,7 @@ RETURN
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "pxlib_harbour_batch.h"
 
 HB_FUNC( PX_NEW )
 {

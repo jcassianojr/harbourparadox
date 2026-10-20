@@ -1,3 +1,6 @@
-call d:\devprg\hb\hb32msys.bat
-call c:\devprg\hb\hb32msys_c.bat
-hbmk2.exe pxrddteste.prg pxrdd.prg libpxlib.a -Ic:\harbour\hb3rd\pxlib\include\ xhb.hbc paradoxpxlib.prg
+@echo off
+call "%~dp0..\complibw32.bat"
+if errorlevel 1 exit /b %errorlevel%
+
+hbmk2.exe pxrddteste.prg pxrdd.prg "%~dp0..\lib\win\mingw\libpxlib.a" -I"C:\harbour\hb3rd\pxlib32\include" -I.. xhb.hbc paradoxpxlib.prg
+exit /b %errorlevel%
